@@ -2469,6 +2469,51 @@ git add apps/web/src/App.tsx apps/web/src/App.test.tsx apps/web/src/runtime.ts a
 git commit -m "feat: wire phase 1 app flows into web and desktop shells"
 ```
 
+### Task 10: Lock Down Android Shell Build Evidence In GitHub Actions And Decide Local Toolchain Retention (deferred for now, 先不执行)
+
+**Status:**
+- Deferred for now (先不执行)
+- Current `M3` work should stay focused on the in-flight web / desktop shell and the local Android validation path.
+- Resume this task only if the delivery path shifts to CI-first Android evidence.
+
+**Files:**
+- Create: `.github/workflows/android-build.yml`
+- Reference: `docs/superpowers/plans/2026-06-26-github-actions-android-report.zh.md`
+- Reference: `docs/superpowers/plans/2026-06-26-github-actions-android-report.en.md`
+
+**Interfaces:**
+- Consumes: `apps/desktop-mobile/package.json` Android scripts, Tauri CLI, Rust Android targets
+- Produces: Android GitHub Actions build workflow, APK / AAB artifacts, Android shell build evidence, local Android toolchain retention or cleanup decision
+
+- [ ] **Step 1: Add the Android GitHub Actions workflow**
+
+Create `.github/workflows/android-build.yml` so CI can provision Java, Rust Android targets, Android SDK / NDK, then run the repo’s existing `android:init` and `android:build` commands on `macos-latest`.
+
+- [ ] **Step 2: Re-run the local regression gates before pushing**
+
+Run: `pnpm install --frozen-lockfile && pnpm typecheck && pnpm test`
+
+Expected: PASS locally so CI is validating Android shell delivery rather than an unrelated regression.
+
+- [ ] **Step 3: Push and trigger the Android workflow**
+
+Push the branch and trigger the workflow through `pull_request` or `workflow_dispatch`.
+
+Expected: PASS for both `tauri android init` and `tauri android build`.
+
+- [ ] **Step 4: Verify the uploaded artifacts**
+
+Confirm the workflow uploaded APK / AAB outputs through `actions/upload-artifact`.
+
+Expected: downloadable Android artifacts exist and can be treated as the first layer of `M3` Android shell evidence.
+
+- [ ] **Step 5: Decide whether to keep or remove the local Android toolchain**
+
+After CI is stable, choose one path:
+
+- keep the local SDK / NDK / JDK for future Android debugging, or
+- remove the local Android toolchain by following `2026-06-26-github-actions-android-report`.
+
 ## Self-Review Checklist (自检清单)
 
 1. **Spec coverage**
@@ -2477,6 +2522,7 @@ git commit -m "feat: wire phase 1 app flows into web and desktop shells"
    - Review history import and reset semantics are covered in Task 7.
    - `4`-option mixed quiz generation is covered in Task 8.
    - Web and desktop shells, resume-session entry, and Android-ready Tauri path are covered in Tasks 4 and 9.
+   - Android shell CI build evidence and local toolchain retention / cleanup are covered in Task 10.
 
 2. **Placeholder scan**
    - No unresolved markers remain in the tasks.

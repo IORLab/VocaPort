@@ -3,14 +3,20 @@
   "private": true,
   "packageManager": "pnpm@11.7.0",
   "scripts": {
+    "build:web": "pnpm --filter @vocaport/web build",
+    "build:desktop:web": "pnpm --filter @vocaport/desktop-mobile build",
+    "check:desktop:native": "cargo check -p vocaport_native_shell",
     "typecheck": "pnpm -r --if-present typecheck",
     "test:ts": "pnpm -r --if-present test",
     "test:rust": "cargo test --workspace",
     "test": "pnpm test:ts && pnpm test:rust"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^24.0.0",
     "autoprefixer": "^10.4.20",
+    "jsdom": "^26.1.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.13",
     "typescript": "^5.9.2",

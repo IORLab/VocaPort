@@ -3985,6 +3985,7 @@ version = "0.0.0"
 dependencies = [
  "rusqlite",
  "tauri",
+ "tauri-build",
 ]
 
 [[package]]

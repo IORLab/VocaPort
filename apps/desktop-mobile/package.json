@@ -4,15 +4,25 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "android:build": "tauri android build",
+    "android:dev": "tauri android dev",
+    "android:init": "tauri android init --ci",
+    "build": "vite build",
     "dev": "vite",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.8.0",
+    "@vocaport/ts-sdk": "workspace:*",
     "@vocaport/ui": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.3",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",

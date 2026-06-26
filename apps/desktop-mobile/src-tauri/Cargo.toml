@@ -2,10 +2,14 @@
 name = "vocaport_native_shell"
 version = "0.0.0"
 edition = "2021"
+build = "build.rs"
 
 [dependencies]
 rusqlite = { version = "0.32", features = ["bundled"] }
 tauri = { version = "2", features = [] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
 
 [lib]
 name = "vocaport_native_shell"
