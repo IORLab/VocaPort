@@ -2,6 +2,8 @@
 
 > English version: [2026-06-26-github-actions-android-report.en.md](/Users/jay/Code/VocaPort/docs/superpowers/plans/2026-06-26-github-actions-android-report.en.md)
 
+> 更新（2026-06-26，后续验证）：最新多架构 Android 调试包已经在至少一台真机上验证可正常启动。下面这份报告仍然主要回答“如何获得可复现的 Android 构建证据”和“是否值得把本机 Android 工具链迁到 CI”，所以历史判断保留不改。
+
 ## 1. 结论
 
 当前最稳妥的 Android 路线是：
@@ -9,6 +11,7 @@
 - 用 GitHub Actions 先做 `build-only` 验证，证明 Android 壳可以在干净环境里初始化并产出 APK / AAB。
 - 本机只保留 Web / Desktop 开发环境；如果不打算继续本机调 Android，可以清理本机 Android SDK / NDK / JDK。
 - `build` 成功只能证明“壳能编出来”，不能自动证明“壳能在设备上正常启动”。如果后面要把 `M3` 的 Android 证据做得更强，再补一层 emulator smoke test 或真机安装验证。
+- 截至当前补记，最新多架构调试包已经拿到“至少一台真机可启动”的正向证据，但仍不等于“所有机型都已验证通过”。
 
 推荐优先级：
 

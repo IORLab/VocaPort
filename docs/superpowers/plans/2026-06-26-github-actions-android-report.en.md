@@ -4,6 +4,8 @@
 
 > Reading note: advanced terms and CI / Android build phrases are glossed in Chinese where they most affect reading speed.
 
+> Update (2026-06-26, later verification): the latest multi-ABI Android debug package has now been verified to launch on at least one real device. This report still focuses on reproducible build evidence and the CI-vs-local tooling decision, so the original analysis remains intact.
+
 ## 1. Executive Summary (结论)
 
 The safest Android path for the current `M3` target is:
@@ -24,6 +26,7 @@ Important boundary:
 
 - a successful CI build proves `Android shell buildable` (可构建),
 - it does **not** by itself prove `Android shell runtime validated` (运行验证通过).
+- the latest multi-ABI local debug package now adds one positive real-device startup signal, but not broad device coverage (广泛机型覆盖).
 
 If stronger evidence is needed later, add an emulator smoke test or a manual device install check.
 
