@@ -38,46 +38,82 @@ export function selectReleaseSections(catalog: ReleaseCatalog): ReleaseSections 
 
 export function inferAssetLabel(asset: ReleaseAsset, locale: Locale) {
   const normalizedName = asset.name.toLowerCase();
+  const architectureLabel = inferAssetArchitectureLabel(normalizedName, locale);
 
   if (
     normalizedName.endsWith(".apk") ||
     asset.contentType === "application/vnd.android.package-archive"
   ) {
-    if (normalizedName.includes("beta")) {
-      return locale === "zh"
-        ? "下载 Android Beta APK"
-        : "Download Android Beta APK";
-    }
-
-    return locale === "zh" ? "下载 Android APK" : "Download Android APK";
+    return buildPlatformAssetLabel({
+      architectureLabel,
+      formatLabel: "APK",
+      isBeta: normalizedName.includes("beta"),
+      locale,
+      platformLabel: "Android",
+    });
   }
 
   if (normalizedName.endsWith(".dmg")) {
-    return locale === "zh" ? "下载 macOS DMG" : "Download macOS DMG";
+    return buildPlatformAssetLabel({
+      architectureLabel,
+      formatLabel: "DMG",
+      locale,
+      platformLabel: "macOS",
+    });
   }
 
   if (normalizedName.endsWith(".pkg")) {
-    return locale === "zh" ? "下载 macOS PKG" : "Download macOS PKG";
+    return buildPlatformAssetLabel({
+      architectureLabel,
+      formatLabel: "PKG",
+      locale,
+      platformLabel: "macOS",
+    });
   }
 
   if (normalizedName.endsWith(".msi")) {
-    return locale === "zh" ? "下载 Windows MSI" : "Download Windows MSI";
+    return buildPlatformAssetLabel({
+      architectureLabel,
+      formatLabel: "MSI",
+      locale,
+      platformLabel: "Windows",
+    });
   }
 
   if (normalizedName.endsWith(".exe")) {
-    return locale === "zh" ? "下载 Windows EXE" : "Download Windows EXE";
+    return buildPlatformAssetLabel({
+      architectureLabel,
+      formatLabel: "EXE",
+      locale,
+      platformLabel: "Windows",
+    });
   }
 
   if (normalizedName.endsWith(".appimage")) {
-    return locale === "zh" ? "下载 Linux AppImage" : "Download Linux AppImage";
+    return buildPlatformAssetLabel({
+      architectureLabel,
+      formatLabel: "AppImage",
+      locale,
+      platformLabel: "Linux",
+    });
   }
 
   if (normalizedName.endsWith(".deb")) {
-    return locale === "zh" ? "下载 Linux DEB" : "Download Linux DEB";
+    return buildPlatformAssetLabel({
+      architectureLabel,
+      formatLabel: "DEB",
+      locale,
+      platformLabel: "Linux",
+    });
   }
 
   if (normalizedName.endsWith(".rpm")) {
-    return locale === "zh" ? "下载 Linux RPM" : "Download Linux RPM";
+    return buildPlatformAssetLabel({
+      architectureLabel,
+      formatLabel: "RPM",
+      locale,
+      platformLabel: "Linux",
+    });
   }
 
   if (normalizedName.endsWith(".zip")) {
@@ -118,4 +154,71 @@ function sortByPublishedAtDesc(left: ReleaseRecord, right: ReleaseRecord) {
   return (
     new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime()
   );
+}
+
+function inferAssetArchitectureLabel(
+  normalizedName: string,
+  locale: Locale,
+): string | null {
+  if (normalizedName.includes("-universal")) {
+    return locale === "zh" ? "通用版" : "Universal";
+  }
+
+  if (normalizedName.includes("-intel")) {
+    return "Intel";
+  }
+
+  if (normalizedName.includes("-arm64")) {
+    return "arm64";
+  }
+
+  if (normalizedName.includes("-x64")) {
+    return "x64";
+  }
+
+  if (normalizedName.includes("-x86_64")) {
+    return "x86_64";
+  }
+
+  if (normalizedName.includes("-aarch64")) {
+    return "aarch64";
+  }
+
+  if (normalizedName.includes("-armv7")) {
+    return "armv7";
+  }
+
+  if (normalizedName.includes("-i686")) {
+    return "i686";
+  }
+
+  return null;
+}
+
+function buildPlatformAssetLabel({
+  architectureLabel,
+  formatLabel,
+  isBeta = false,
+  locale,
+  platformLabel,
+}: {
+  architectureLabel: string | null;
+  formatLabel: string;
+  isBeta?: boolean;
+  locale: Locale;
+  platformLabel: string;
+}) {
+  const parts = [locale === "zh" ? "下载" : "Download", platformLabel];
+
+  if (architectureLabel) {
+    parts.push(architectureLabel);
+  }
+
+  if (isBeta) {
+    parts.push("Beta");
+  }
+
+  parts.push(formatLabel);
+
+  return parts.join(" ");
 }

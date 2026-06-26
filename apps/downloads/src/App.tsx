@@ -185,21 +185,26 @@ function ReleaseCard({
       </p>
 
       <div className="asset-list">
-        {release.assets.map((asset) => (
-          <a
-            key={asset.id}
-            className="asset-link"
-            href={asset.downloadUrl}
-            rel="noreferrer"
-            target="_blank"
-          >
-            <span>{inferAssetLabel(asset, locale)}</span>
-            <span className="asset-link__meta">
-              {formatBytes(asset.sizeBytes)} · {asset.downloadCount}
-              {locale === "zh" ? " 次下载" : " downloads"}
-            </span>
-          </a>
-        ))}
+        {release.assets.map((asset) => {
+          const assetLabel = inferAssetLabel(asset, locale);
+
+          return (
+            <a
+              key={asset.id}
+              aria-label={assetLabel}
+              className="asset-link"
+              href={asset.downloadUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <span>{assetLabel}</span>
+              <span className="asset-link__meta">
+                {formatBytes(asset.sizeBytes)} · {asset.downloadCount}
+                {locale === "zh" ? " 次下载" : " downloads"}
+              </span>
+            </a>
+          );
+        })}
       </div>
 
       <div className="release-card__footer">

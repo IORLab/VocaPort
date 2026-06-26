@@ -6,7 +6,7 @@ VocaPort 第一版公开 Beta。
 
 ### 本次包含
 - Web / Desktop / Android 壳层已公开可用。
-- 已附带 Android universal beta APK。
+- 已附带 Android、macOS、Windows、Linux 多平台安装包。
 
 ---
 
@@ -16,7 +16,7 @@ First public beta release of VocaPort.
 
 ### Included in this release
 - The Web / Desktop / Android shells are now publicly available.
-- Includes an Android universal beta APK.
+- Includes Android, macOS, Windows, and Linux installers.
 `;
 
 export const sampleGithubReleases = [
@@ -40,6 +40,36 @@ export const sampleGithubReleases = [
         download_count: 3,
         updated_at: "2026-06-26T09:10:00.000Z",
       },
+      {
+        id: 14,
+        name: "vocaport-v1.1.0-beta.1-macos-intel.dmg",
+        browser_download_url:
+          "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-macos-intel.dmg",
+        content_type: "application/x-apple-diskimage",
+        size: 158000000,
+        download_count: 2,
+        updated_at: "2026-06-26T09:12:00.000Z",
+      },
+      {
+        id: 21,
+        name: "vocaport-v1.1.0-beta.1-macos-arm64.dmg",
+        browser_download_url:
+          "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-macos-arm64.dmg",
+        content_type: "application/x-apple-diskimage",
+        size: 156000000,
+        download_count: 1,
+        updated_at: "2026-06-26T09:13:00.000Z",
+      },
+      {
+        id: 15,
+        name: "vocaport-v1.1.0-beta.1-windows-x64-setup.exe",
+        browser_download_url:
+          "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-windows-x64-setup.exe",
+        content_type: "application/vnd.microsoft.portable-executable",
+        size: 149000000,
+        download_count: 1,
+        updated_at: "2026-06-26T09:15:00.000Z",
+      },
     ],
   },
   {
@@ -62,6 +92,56 @@ export const sampleGithubReleases = [
         download_count: 10,
         updated_at: "2026-06-25T09:10:00.000Z",
       },
+      {
+        id: 16,
+        name: "vocaport-v1.0.1-macos-intel.dmg",
+        browser_download_url:
+          "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-macos-intel.dmg",
+        content_type: "application/x-apple-diskimage",
+        size: 157000000,
+        download_count: 5,
+        updated_at: "2026-06-25T09:11:00.000Z",
+      },
+      {
+        id: 22,
+        name: "vocaport-v1.0.1-macos-arm64.dmg",
+        browser_download_url:
+          "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-macos-arm64.dmg",
+        content_type: "application/x-apple-diskimage",
+        size: 155000000,
+        download_count: 4,
+        updated_at: "2026-06-25T09:11:30.000Z",
+      },
+      {
+        id: 17,
+        name: "vocaport-v1.0.1-windows-x64.msi",
+        browser_download_url:
+          "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-windows-x64.msi",
+        content_type: "application/x-msi",
+        size: 151000000,
+        download_count: 6,
+        updated_at: "2026-06-25T09:12:00.000Z",
+      },
+      {
+        id: 18,
+        name: "vocaport-v1.0.1-linux-x64.AppImage",
+        browser_download_url:
+          "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-linux-x64.AppImage",
+        content_type: "application/octet-stream",
+        size: 146000000,
+        download_count: 4,
+        updated_at: "2026-06-25T09:13:00.000Z",
+      },
+      {
+        id: 19,
+        name: "vocaport-v1.0.1-linux-x64.deb",
+        browser_download_url:
+          "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-linux-x64.deb",
+        content_type: "application/vnd.debian.binary-package",
+        size: 139000000,
+        download_count: 3,
+        updated_at: "2026-06-25T09:14:00.000Z",
+      },
     ],
   },
   {
@@ -83,6 +163,16 @@ export const sampleGithubReleases = [
         size: 122000000,
         download_count: 14,
         updated_at: "2026-06-24T09:10:00.000Z",
+      },
+      {
+        id: 20,
+        name: "vocaport-v1.0.0-windows-x64.msi",
+        browser_download_url:
+          "https://example.com/downloads/v1.0.0/vocaport-v1.0.0-windows-x64.msi",
+        content_type: "application/x-msi",
+        size: 150000000,
+        download_count: 8,
+        updated_at: "2026-06-24T09:11:00.000Z",
       },
     ],
   },
@@ -123,6 +213,36 @@ export const sampleCatalog: ReleaseCatalog = {
           downloadCount: 3,
           updatedAt: "2026-06-26T09:10:00.000Z",
         },
+        {
+          id: 14,
+          name: "vocaport-v1.1.0-beta.1-macos-intel.dmg",
+          downloadUrl:
+            "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-macos-intel.dmg",
+          contentType: "application/x-apple-diskimage",
+          sizeBytes: 158000000,
+          downloadCount: 2,
+          updatedAt: "2026-06-26T09:12:00.000Z",
+        },
+        {
+          id: 21,
+          name: "vocaport-v1.1.0-beta.1-macos-arm64.dmg",
+          downloadUrl:
+            "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-macos-arm64.dmg",
+          contentType: "application/x-apple-diskimage",
+          sizeBytes: 156000000,
+          downloadCount: 1,
+          updatedAt: "2026-06-26T09:13:00.000Z",
+        },
+        {
+          id: 15,
+          name: "vocaport-v1.1.0-beta.1-windows-x64-setup.exe",
+          downloadUrl:
+            "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-windows-x64-setup.exe",
+          contentType: "application/vnd.microsoft.portable-executable",
+          sizeBytes: 149000000,
+          downloadCount: 1,
+          updatedAt: "2026-06-26T09:15:00.000Z",
+        },
       ],
     },
     {
@@ -144,6 +264,56 @@ export const sampleCatalog: ReleaseCatalog = {
           downloadCount: 10,
           updatedAt: "2026-06-25T09:10:00.000Z",
         },
+        {
+          id: 16,
+          name: "vocaport-v1.0.1-macos-intel.dmg",
+          downloadUrl:
+            "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-macos-intel.dmg",
+          contentType: "application/x-apple-diskimage",
+          sizeBytes: 157000000,
+          downloadCount: 5,
+          updatedAt: "2026-06-25T09:11:00.000Z",
+        },
+        {
+          id: 22,
+          name: "vocaport-v1.0.1-macos-arm64.dmg",
+          downloadUrl:
+            "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-macos-arm64.dmg",
+          contentType: "application/x-apple-diskimage",
+          sizeBytes: 155000000,
+          downloadCount: 4,
+          updatedAt: "2026-06-25T09:11:30.000Z",
+        },
+        {
+          id: 17,
+          name: "vocaport-v1.0.1-windows-x64.msi",
+          downloadUrl:
+            "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-windows-x64.msi",
+          contentType: "application/x-msi",
+          sizeBytes: 151000000,
+          downloadCount: 6,
+          updatedAt: "2026-06-25T09:12:00.000Z",
+        },
+        {
+          id: 18,
+          name: "vocaport-v1.0.1-linux-x64.AppImage",
+          downloadUrl:
+            "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-linux-x64.AppImage",
+          contentType: "application/octet-stream",
+          sizeBytes: 146000000,
+          downloadCount: 4,
+          updatedAt: "2026-06-25T09:13:00.000Z",
+        },
+        {
+          id: 19,
+          name: "vocaport-v1.0.1-linux-x64.deb",
+          downloadUrl:
+            "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-linux-x64.deb",
+          contentType: "application/vnd.debian.binary-package",
+          sizeBytes: 139000000,
+          downloadCount: 3,
+          updatedAt: "2026-06-25T09:14:00.000Z",
+        },
       ],
     },
     {
@@ -164,6 +334,16 @@ export const sampleCatalog: ReleaseCatalog = {
           sizeBytes: 122000000,
           downloadCount: 14,
           updatedAt: "2026-06-24T09:10:00.000Z",
+        },
+        {
+          id: 20,
+          name: "vocaport-v1.0.0-windows-x64.msi",
+          downloadUrl:
+            "https://example.com/downloads/v1.0.0/vocaport-v1.0.0-windows-x64.msi",
+          contentType: "application/x-msi",
+          sizeBytes: 150000000,
+          downloadCount: 8,
+          updatedAt: "2026-06-24T09:11:00.000Z",
         },
       ],
     },

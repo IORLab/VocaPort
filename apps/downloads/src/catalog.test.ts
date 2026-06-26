@@ -17,11 +17,14 @@ describe("release catalog", () => {
       tagName: "v1.1.0-beta.1",
       isPrerelease: true,
     });
-    expect(catalog.releases[1].assets[0]).toMatchObject({
-      name: "vocaport-v1.0.1-android-universal-beta.apk",
-      downloadUrl:
-        "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-android-universal-beta.apk",
-    });
+    expect(catalog.releases[1].assets.map((asset) => asset.name)).toEqual([
+      "vocaport-v1.0.1-android-universal-beta.apk",
+      "vocaport-v1.0.1-macos-intel.dmg",
+      "vocaport-v1.0.1-macos-arm64.dmg",
+      "vocaport-v1.0.1-windows-x64.msi",
+      "vocaport-v1.0.1-linux-x64.AppImage",
+      "vocaport-v1.0.1-linux-x64.deb",
+    ]);
   });
 
   it("highlights latest stable and prerelease while keeping older versions in the archive list", () => {
@@ -34,7 +37,7 @@ describe("release catalog", () => {
     ]);
   });
 
-  it("labels beta android assets explicitly", () => {
+  it("labels platform assets with architecture when the filename encodes it", () => {
     expect(
       inferAssetLabel(
         {
@@ -48,7 +51,7 @@ describe("release catalog", () => {
         },
         "en",
       ),
-    ).toBe("Download Android Beta APK");
+    ).toBe("Download Android Universal Beta APK");
     expect(
       inferAssetLabel(
         {
@@ -62,6 +65,48 @@ describe("release catalog", () => {
         },
         "zh",
       ),
-    ).toBe("下载 Android Beta APK");
+    ).toBe("下载 Android 通用版 Beta APK");
+    expect(
+      inferAssetLabel(
+        {
+          id: 1001,
+          name: "vocaport-v0.2.0-windows-x64.msi",
+          downloadUrl: "https://example.com/v0.2.0.msi",
+          contentType: "application/x-msi",
+          sizeBytes: 123,
+          downloadCount: 0,
+          updatedAt: "2026-06-26T10:00:00.000Z",
+        },
+        "en",
+      ),
+    ).toBe("Download Windows x64 MSI");
+    expect(
+      inferAssetLabel(
+        {
+          id: 1002,
+          name: "vocaport-v0.2.0-linux-x64.AppImage",
+          downloadUrl: "https://example.com/v0.2.0.AppImage",
+          contentType: "application/octet-stream",
+          sizeBytes: 123,
+          downloadCount: 0,
+          updatedAt: "2026-06-26T10:00:00.000Z",
+        },
+        "en",
+      ),
+    ).toBe("Download Linux x64 AppImage");
+    expect(
+      inferAssetLabel(
+        {
+          id: 1003,
+          name: "vocaport-v0.2.0-macos-arm64.dmg",
+          downloadUrl: "https://example.com/v0.2.0.dmg",
+          contentType: "application/x-apple-diskimage",
+          sizeBytes: 123,
+          downloadCount: 0,
+          updatedAt: "2026-06-26T10:00:00.000Z",
+        },
+        "zh",
+      ),
+    ).toBe("下载 macOS arm64 DMG");
   });
 });

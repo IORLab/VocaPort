@@ -10,9 +10,9 @@ VocaPort is a Rust-first (Rust 优先), offline-first (离线优先) vocabulary 
 - Web and Desktop both support import preview, import commit, study start, session resume, answering, and progress reset.
 - Interrupted sessions now restore from durable snapshots (持久化快照): Web uses browser storage, and Desktop uses SQLite.
 - `apps/downloads` now provides a GitHub Pages download page that can be generated from GitHub Releases.
-- The Android build chain (构建链路) is integrated and can produce a multi-ABI (多架构) `universal beta APK` for release distribution (发布分发).
+- GitHub release automation (发布自动化) now builds Android and Desktop installers in parallel, with platform-and-architecture names such as `android-universal`, `macos-intel`, `macos-arm64`, `windows-x64`, and `linux-x64`.
 - The latest multi-ABI (多架构) Android beta package has been verified to launch on at least one real device (真机).
-- Android prereleases are distributed as Beta APK assets through GitHub Releases and mirrored on the GitHub Pages downloads site.
+- Public release assets are distributed through GitHub Releases and mirrored on the GitHub Pages downloads site only after the full asset set finishes uploading.
 - Android release automation should load signing material from repository secrets instead of checking keystore files into the repository.
 
 ## Repository Layout

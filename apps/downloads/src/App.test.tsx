@@ -23,11 +23,56 @@ describe("downloads page", () => {
     expect(
       within(latestStableSection as HTMLElement)
         .getByRole("link", {
-          name: /Download Android Beta APK/,
+          name: /Download Android Universal Beta APK/,
         })
         .getAttribute("href"),
     ).toBe(
       "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-android-universal-beta.apk",
+    );
+    expect(
+      within(latestStableSection as HTMLElement)
+        .getByRole("link", {
+          name: "Download macOS Intel DMG",
+        })
+        .getAttribute("href"),
+    ).toBe(
+      "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-macos-intel.dmg",
+    );
+    expect(
+      within(latestStableSection as HTMLElement)
+        .getByRole("link", {
+          name: "Download macOS arm64 DMG",
+        })
+        .getAttribute("href"),
+    ).toBe(
+      "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-macos-arm64.dmg",
+    );
+    expect(
+      within(latestStableSection as HTMLElement)
+        .getByRole("link", {
+          name: "Download Windows x64 MSI",
+        })
+        .getAttribute("href"),
+    ).toBe(
+      "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-windows-x64.msi",
+    );
+    expect(
+      within(latestStableSection as HTMLElement)
+        .getByRole("link", {
+          name: "Download Linux x64 AppImage",
+        })
+        .getAttribute("href"),
+    ).toBe(
+      "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-linux-x64.AppImage",
+    );
+    expect(
+      within(latestStableSection as HTMLElement)
+        .getByRole("link", {
+          name: "Download Linux x64 DEB",
+        })
+        .getAttribute("href"),
+    ).toBe(
+      "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-linux-x64.deb",
     );
 
     const latestPrereleaseSection = screen.getByText("Latest prerelease").closest(
@@ -40,6 +85,24 @@ describe("downloads page", () => {
         "v1.1.0-beta.1",
       ),
     ).toBeTruthy();
+    expect(
+      within(latestPrereleaseSection as HTMLElement)
+        .getByRole("link", {
+          name: "Download macOS Intel DMG",
+        })
+        .getAttribute("href"),
+    ).toBe(
+      "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-macos-intel.dmg",
+    );
+    expect(
+      within(latestPrereleaseSection as HTMLElement)
+        .getByRole("link", {
+          name: "Download macOS arm64 DMG",
+        })
+        .getAttribute("href"),
+    ).toBe(
+      "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-macos-arm64.dmg",
+    );
 
     const moreDownloadsSection = screen
       .getByRole("heading", { name: "More downloads" })
