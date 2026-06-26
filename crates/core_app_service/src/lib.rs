@@ -1,8 +1,9 @@
 use core_bridge_contract::{
     ActiveSessionResponse, AnswerQuestionRequest, AnswerQuestionResponse, AppliedRating, Deck,
-    ExplanationPayload, ImportCommitRequest, ImportCommitResponse, ImportPreviewResponse,
-    NextReviewSuggestion, ProgressResetScope, QuestionDto, QuestionOptionKind, QuestionPromptKind,
-    ResetProgressRequest, SessionMode, StartSessionRequest,
+    DeckSummaryDto, ExplanationPayload, ImportCommitRequest, ImportCommitResponse,
+    ImportPreviewResponse, ListDecksResponse, NextReviewSuggestion, ProgressResetScope,
+    QuestionDto, QuestionOptionKind, QuestionPromptKind, ResetProgressRequest, SelectDeckRequest,
+    SelectDeckResponse, SessionMode, StartSessionRequest,
 };
 use core_domain::{SessionQuestionSnapshot, StudyCard, StudySession, VocabularyEntry};
 use core_events::{ImportRecord, ProgressReset, ReviewEvent, ReviewEventSource, ReviewState};
@@ -35,6 +36,7 @@ pub enum PhaseOneServiceError {
 pub struct PhaseOneService {
     pending_imports: HashMap<String, PendingImport>,
     decks: HashMap<String, DeckState>,
+    current_deck_id: Option<String>,
     active_session: Option<ActiveSessionState>,
     session_sequence: u32,
     question_sequence: u32,
@@ -47,6 +49,7 @@ impl PhaseOneService {
     pub fn export_snapshot_json(&self) -> Result<String, PhaseOneServiceError> {
         Ok(serde_json::to_string(&PhaseOneServiceSnapshot {
             decks: self.decks.clone(),
+            current_deck_id: self.current_deck_id.clone(),
             active_session: self.active_session.clone(),
             session_sequence: self.session_sequence,
             question_sequence: self.question_sequence,
@@ -58,10 +61,14 @@ impl PhaseOneService {
 
     pub fn from_snapshot_json(snapshot_json: &str) -> Result<Self, PhaseOneServiceError> {
         let snapshot: PhaseOneServiceSnapshot = serde_json::from_str(snapshot_json)?;
+        let current_deck_id = snapshot
+            .current_deck_id
+            .filter(|deck_id| snapshot.decks.contains_key(deck_id));
 
         Ok(Self {
             pending_imports: HashMap::new(),
             decks: snapshot.decks,
+            current_deck_id,
             active_session: snapshot.active_session,
             session_sequence: snapshot.session_sequence,
             question_sequence: snapshot.question_sequence,
@@ -77,6 +84,53 @@ impl PhaseOneService {
             "quiz.generate".to_string(),
             "scheduler.compute".to_string(),
         ]
+    }
+
+    pub fn list_decks(&self) -> Result<ListDecksResponse, PhaseOneServiceError> {
+        let mut decks = self
+            .decks
+            .iter()
+            .map(|(deck_id, state)| DeckSummaryDto {
+                deck_id: deck_id.clone(),
+                deck_name: state._deck.name.clone(),
+                entry_count: state.entries.len(),
+                card_count: state.cards.len(),
+                review_event_count: state.review_events.len(),
+                due_count: state.cards.len(),
+                has_active_session: self
+                    .active_session
+                    .as_ref()
+                    .is_some_and(|session| session.session.deck_id == *deck_id),
+                is_current_deck: self.current_deck_id.as_deref() == Some(deck_id.as_str()),
+                last_imported_at: state
+                    ._latest_import_record
+                    .as_ref()
+                    .map(|record| record.imported_at.clone()),
+            })
+            .collect::<Vec<_>>();
+
+        decks.sort_by(|left, right| {
+            left.deck_name
+                .cmp(&right.deck_name)
+                .then_with(|| left.deck_id.cmp(&right.deck_id))
+        });
+
+        Ok(ListDecksResponse { decks })
+    }
+
+    pub fn select_deck(
+        &mut self,
+        request: SelectDeckRequest,
+    ) -> Result<SelectDeckResponse, PhaseOneServiceError> {
+        if !self.decks.contains_key(&request.deck_id) {
+            return Err(PhaseOneServiceError::MissingDeck(request.deck_id));
+        }
+
+        self.current_deck_id = Some(request.deck_id.clone());
+
+        Ok(SelectDeckResponse {
+            deck_id: request.deck_id,
+        })
     }
 
     pub fn preview_apkg(
@@ -522,6 +576,7 @@ struct ActiveSessionState {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PhaseOneServiceSnapshot {
     decks: HashMap<String, DeckState>,
+    current_deck_id: Option<String>,
     active_session: Option<ActiveSessionState>,
     session_sequence: u32,
     question_sequence: u32,

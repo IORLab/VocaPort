@@ -174,6 +174,30 @@ export interface ImportCommitResponse {
   nextRecommendedAction: string;
 }
 
+export interface DeckSummaryDto {
+  deckId: string;
+  deckName: string;
+  entryCount: number;
+  cardCount: number;
+  reviewEventCount: number;
+  dueCount: number;
+  hasActiveSession: boolean;
+  isCurrentDeck: boolean;
+  lastImportedAt?: string;
+}
+
+export interface ListDecksResponse {
+  decks: DeckSummaryDto[];
+}
+
+export interface SelectDeckRequest {
+  deckId: string;
+}
+
+export interface SelectDeckResponse {
+  deckId: string;
+}
+
 export interface StartSessionRequest {
   deckId: string;
   mode: StudySessionMode;

@@ -100,6 +100,39 @@ pub struct ImportCommitResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DeckSummaryDto {
+    pub deck_id: String,
+    pub deck_name: String,
+    pub entry_count: usize,
+    pub card_count: usize,
+    pub review_event_count: usize,
+    pub due_count: usize,
+    pub has_active_session: bool,
+    pub is_current_deck: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_imported_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ListDecksResponse {
+    pub decks: Vec<DeckSummaryDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SelectDeckRequest {
+    pub deck_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SelectDeckResponse {
+    pub deck_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum SessionMode {
     ReviewDueFirst,
