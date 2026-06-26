@@ -7,6 +7,7 @@ VocaPort is a Rust-first (Rust 优先), offline-first (离线优先) vocabulary 
 - The Phase 1 foundation (一期基础骨架) has been merged into `main`.
 - The Web shell is runnable.
 - The Desktop Tauri shell is runnable locally.
+- `apps/downloads` now provides a GitHub Pages download page that can be generated from GitHub Releases.
 - The Android build chain (构建链路) is integrated and can produce a multi-ABI (多架构) `universal debug APK`.
 - The latest multi-ABI (多架构) Android package has been verified to launch on at least one real device (真机).
 - The import / study flow is still demonstrated by the stub runtime (桩运行时) in `packages/ts-sdk`; the full Rust business pipeline (业务链路) is not wired into the frontend runtime yet.
@@ -15,6 +16,7 @@ VocaPort is a Rust-first (Rust 优先), offline-first (离线优先) vocabulary 
 
 - `apps/web`: Web shell and frontend runtime entry.
 - `apps/desktop-mobile`: shared frontend shell for Desktop / Android plus the Tauri native shell.
+- `apps/downloads`: GitHub Pages download site that surfaces the latest release, the latest prerelease, and older installers.
 - `packages/bridge-schema`: shared DTOs (数据传输对象) and bridge types.
 - `packages/ts-sdk`: frontend runtime adapter (运行时适配层); currently includes the stub runtime.
 - `packages/ui`: cross-platform UI components and the Phase 1 workspace screen.
@@ -53,19 +55,25 @@ cargo check -p vocaport_native_shell
 pnpm --filter @vocaport/web dev
 ```
 
-### 4. Start the Desktop frontend shell
+### 4. Start the downloads page locally
+
+```bash
+pnpm --filter @vocaport/downloads dev
+```
+
+### 5. Start the Desktop frontend shell
 
 ```bash
 pnpm --filter @vocaport/desktop-mobile dev
 ```
 
-### 5. Start the Tauri Desktop shell
+### 6. Start the Tauri Desktop shell
 
 ```bash
 pnpm --filter @vocaport/desktop-mobile exec tauri dev
 ```
 
-### 6. Build the Android debug package
+### 7. Build the Android debug package
 
 First install the Android toolchain (工具链), then run:
 
@@ -81,6 +89,7 @@ pnpm --filter @vocaport/desktop-mobile exec tauri android build --debug --apk
 | `pnpm test` | Run the TypeScript and Rust test suites |
 | `pnpm typecheck` | Run every available TypeScript type check |
 | `pnpm build:web` | Build the Web app |
+| `pnpm --filter @vocaport/downloads build` | Build the static downloads site |
 | `pnpm build:desktop:web` | Build the shared frontend assets for Desktop |
 | `cargo test --workspace` | Run the Rust workspace tests |
 | `cargo check -p vocaport_native_shell` | Verify the Tauri native shell |

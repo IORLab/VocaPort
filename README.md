@@ -7,6 +7,7 @@
 
 - Phase 1 foundation has been merged into `main`.
 - Web and Desktop shells are runnable.
+- A dedicated downloads page can be built from GitHub Releases through GitHub Pages.
 - The Android build chain can produce a universal debug APK.
 - The latest multi-ABI Android package has been verified to launch on at least one real device.
 - The import / study flow is still backed by the stub runtime in `packages/ts-sdk`, so the end-to-end Rust bridge is not fully wired yet.
@@ -18,6 +19,7 @@ pnpm install
 pnpm test
 pnpm typecheck
 pnpm --filter @vocaport/web dev
+pnpm --filter @vocaport/downloads dev
 pnpm --filter @vocaport/desktop-mobile exec tauri dev
 ```
 
