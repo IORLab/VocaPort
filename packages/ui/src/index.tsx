@@ -2,6 +2,8 @@ import { useEffect, useId, useState } from "react";
 import type { PropsWithChildren } from "react";
 import type {
   ActiveSessionResponse,
+  AnswerQuestionRequest,
+  AnswerQuestionResponse,
   ImportCommitRequest,
   ImportCommitResponse,
   ImportPreviewRequest,
@@ -11,6 +13,18 @@ import type {
   StartSessionRequest,
 } from "@vocaport/bridge-schema";
 import type { BridgeRuntimeAdapter } from "@vocaport/ts-sdk";
+
+function formatRuntimeError(error: unknown, fallbackMessage: string) {
+  if (typeof error === "string" && error.length > 0) {
+    return error;
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
 
 export function PageShell({ children }: PropsWithChildren) {
   return (
@@ -45,18 +59,52 @@ export function PhaseOneWorkspace({
   const [resumeAvailable, setResumeAvailable] = useState(false);
 
   useEffect(() => {
-    void runtime.healthPing().then(setHealthStatus);
+    let cancelled = false;
+
+    void runtime
+      .healthPing()
+      .then((status) => {
+        if (!cancelled) {
+          setHealthStatus(status);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setHealthStatus("连接失败");
+          setStatusMessage(formatRuntimeError(error, "Runtime 健康检查失败。"));
+        }
+      });
 
     void runtime
       .invoke<undefined, string[]>("module.listCapabilities", undefined)
-      .then(setCapabilities);
+      .then((runtimeCapabilities) => {
+        if (!cancelled) {
+          setCapabilities(runtimeCapabilities);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setStatusMessage(formatRuntimeError(error, "读取模块能力失败。"));
+        }
+      });
 
     void runtime
       .invoke<undefined, ActiveSessionResponse>("quiz.getActiveSession", undefined)
       .then((response) => {
-        setResumeAvailable(Boolean(response.question));
-        setQuestion(response.question ?? null);
+        if (!cancelled) {
+          setResumeAvailable(Boolean(response.question));
+          setQuestion(response.question ?? null);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setStatusMessage(formatRuntimeError(error, "恢复会话状态失败。"));
+        }
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [runtime]);
 
   async function handlePreviewImport() {
@@ -65,18 +113,22 @@ export function PhaseOneWorkspace({
       return;
     }
 
-    const fileBytes = await readFileBytes(selectedFile);
-    const response = await runtime.invoke<ImportPreviewRequest, ImportPreviewResponse>(
-      "import.previewApkg",
-      {
+    try {
+      const fileBytes = await readFileBytes(selectedFile);
+      const response = await runtime.invoke<
+        ImportPreviewRequest,
+        ImportPreviewResponse
+      >("import.previewApkg", {
         fileName: selectedFile.name,
         fileBytes,
-      },
-    );
+      });
 
-    setPreview(response);
-    setCommitSummary(null);
-    setStatusMessage(null);
+      setPreview(response);
+      setCommitSummary(null);
+      setStatusMessage(null);
+    } catch (error) {
+      setStatusMessage(formatRuntimeError(error, "导入预览失败。"));
+    }
   }
 
   async function handleCommitImport() {
@@ -85,9 +137,11 @@ export function PhaseOneWorkspace({
       return;
     }
 
-    const response = await runtime.invoke<ImportCommitRequest, ImportCommitResponse>(
-      "import.commitApkg",
-      {
+    try {
+      const response = await runtime.invoke<
+        ImportCommitRequest,
+        ImportCommitResponse
+      >("import.commitApkg", {
         importId: preview.importId,
         targetDeckId: preview.resolvedDeckId,
         commitMode: "upsert_existing_deck",
@@ -98,62 +152,107 @@ export function PhaseOneWorkspace({
           imageField: preview.fieldCandidates.image?.fieldName,
           audioField: preview.fieldCandidates.audio?.fieldName,
         },
-      },
-    );
+      });
 
-    setCommitSummary(response);
-    setStatusMessage("导入完成");
+      setCommitSummary(response);
+      setStatusMessage("导入完成");
+    } catch (error) {
+      setStatusMessage(formatRuntimeError(error, "确认导入失败。"));
+    }
   }
 
   async function handleStartStudy() {
-    const response = await runtime.invoke<StartSessionRequest, QuestionDto>(
-      "quiz.startSession",
-      {
-        deckId:
-          commitSummary?.deckId ??
-          preview?.resolvedDeckId ??
-          "deck-basic-vocab",
-        mode: "review_due_first",
-        forceNew: false,
-      },
-    );
+    try {
+      const response = await runtime.invoke<StartSessionRequest, QuestionDto>(
+        "quiz.startSession",
+        {
+          deckId:
+            commitSummary?.deckId ??
+            preview?.resolvedDeckId ??
+            "deck-basic-vocab",
+          mode: "review_due_first",
+          forceNew: false,
+        },
+      );
 
-    setQuestion(response);
-    setResumeAvailable(true);
-    setStatusMessage(null);
+      setQuestion(response);
+      setResumeAvailable(true);
+      setStatusMessage(null);
+    } catch (error) {
+      setStatusMessage(formatRuntimeError(error, "启动学习会话失败。"));
+    }
   }
 
   async function handleResumeSession() {
-    const response = await runtime.invoke<undefined, ActiveSessionResponse>(
-      "quiz.getActiveSession",
-      undefined,
-    );
+    try {
+      const response = await runtime.invoke<undefined, ActiveSessionResponse>(
+        "quiz.getActiveSession",
+        undefined,
+      );
 
-    if (response.question) {
-      setQuestion(response.question);
-      setStatusMessage(null);
-      return;
+      if (response.question) {
+        setQuestion(response.question);
+        setStatusMessage(null);
+        return;
+      }
+
+      setStatusMessage("当前没有可恢复的会话。");
+    } catch (error) {
+      setStatusMessage(formatRuntimeError(error, "恢复学习会话失败。"));
     }
-
-    setStatusMessage("当前没有可恢复的会话。");
   }
 
   async function handleResetProgress() {
-    await runtime.invoke<ResetProgressRequest, { ok: boolean }>(
-      "review.resetProgress",
-      {
-        scope: "deck",
-        targetDeckId:
-          commitSummary?.deckId ??
-          preview?.resolvedDeckId ??
-          "deck-basic-vocab",
-        reason: "user-reset",
-      },
-    );
+    try {
+      await runtime.invoke<ResetProgressRequest, { ok: boolean }>(
+        "review.resetProgress",
+        {
+          scope: "deck",
+          targetDeckId:
+            commitSummary?.deckId ??
+            preview?.resolvedDeckId ??
+            "deck-basic-vocab",
+          reason: "user-reset",
+        },
+      );
 
-    setQuestion(null);
-    setResumeAvailable(false);
-    setStatusMessage("已重置当前词库进度。");
+      setQuestion(null);
+      setResumeAvailable(false);
+      setStatusMessage("已重置当前词库进度。");
+    } catch (error) {
+      setStatusMessage(formatRuntimeError(error, "重置学习进度失败。"));
+    }
+  }
+
+  async function handleAnswerQuestion(selectedOptionId: string) {
+    if (!question) {
+      setStatusMessage("当前没有可作答的题目。");
+      return;
+    }
+
+    try {
+      const response = await runtime.invoke<
+        AnswerQuestionRequest,
+        AnswerQuestionResponse
+      >("quiz.answerQuestion", {
+        sessionId: question.sessionId,
+        questionId: question.questionId,
+        selectedOptionId,
+      });
+
+      if (response.nextQuestion) {
+        setQuestion(response.nextQuestion);
+        setResumeAvailable(true);
+        setStatusMessage(response.isCorrect ? "回答正确。" : "回答错误。");
+        return;
+      }
+
+      setQuestion(null);
+      setResumeAvailable(false);
+      setStatusMessage(response.nextReviewSuggestion.summaryText);
+    } catch (error) {
+      setStatusMessage(formatRuntimeError(error, "提交答案失败。"));
+    }
   }
 
   return (
@@ -172,7 +271,7 @@ export function PhaseOneWorkspace({
         </div>
 
         <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
-          走通一期最短链：导入词库、确认字段、启动学习会话、恢复会话、重置当前进度。
+          走通一期最短链：导入词库、确认字段、启动学习会话、完成答题、恢复会话、重置当前进度。
         </p>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -278,6 +377,7 @@ export function PhaseOneWorkspace({
                       key={option.id}
                       className="rounded-xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-left text-sm text-slate-100"
                       type="button"
+                      onClick={() => void handleAnswerQuestion(option.id)}
                     >
                       {option.value}
                     </button>
@@ -321,9 +421,25 @@ async function readFileBytes(file: File): Promise<Uint8Array> {
     return new Uint8Array(await file.arrayBuffer());
   }
 
-  if (typeof file.text === "function") {
-    return new TextEncoder().encode(await file.text());
+  if (typeof FileReader !== "undefined") {
+    return await new Promise<Uint8Array>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        const result = reader.result;
+        if (!(result instanceof ArrayBuffer)) {
+          reject(new Error("Failed to read binary file contents."));
+          return;
+        }
+
+        resolve(new Uint8Array(result));
+      };
+      reader.onerror = () => {
+        reject(reader.error ?? new Error("Failed to read selected file."));
+      };
+      reader.readAsArrayBuffer(file);
+    });
   }
 
-  return new Uint8Array([1, 2, 3]);
+  throw new Error("Current environment cannot read binary file contents.");
 }

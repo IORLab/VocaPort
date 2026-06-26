@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "dev": "vite",
+    "build": "VOCAPORT_WASM_PROFILE=release ../../scripts/build-web-wasm.sh && vite build",
+    "dev": "../../scripts/build-web-wasm.sh && vite",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "../../scripts/build-web-wasm.sh && vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -21,6 +21,7 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.8"
+    "vite": "^5.4.8",
+    "vite-plugin-wasm": "^3.4.1"
   }
 }

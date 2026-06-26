@@ -1,6 +1,7 @@
 export type {
   ActiveSessionResponse,
   AnswerQuestionRequest,
+  AnswerQuestionResponse,
   ImportCommitRequest,
   ImportCommitResponse,
   ImportPreviewRequest,
@@ -13,6 +14,8 @@ export type {
 
 import type {
   ActiveSessionResponse,
+  AnswerQuestionRequest,
+  AnswerQuestionResponse,
   ImportCommitRequest,
   ImportCommitResponse,
   ImportPreviewRequest,
@@ -80,6 +83,10 @@ const baseQuestion: QuestionDto = {
 
 interface CreatePhaseOneStubRuntimeOptions {
   healthPing?: () => Promise<string>;
+  invoke?: <TRequest, TResponse>(
+    command: string,
+    payload: TRequest,
+  ) => Promise<TResponse>;
 }
 
 export function createPhaseOneStubRuntime(
@@ -97,6 +104,10 @@ export function createPhaseOneStubRuntime(
       command: string,
       payload: TRequest,
     ): Promise<TResponse> {
+      if (options.invoke) {
+        return options.invoke(command, payload);
+      }
+
       if (command === "module.listCapabilities") {
         return [
           "import.apkg.read",
@@ -134,6 +145,35 @@ export function createPhaseOneStubRuntime(
         } satisfies QuestionDto;
         activeSession = { question };
         return question as unknown as TResponse;
+      }
+
+      if (command === "quiz.answerQuestion") {
+        const request = payload as AnswerQuestionRequest;
+        const question = activeSession.question;
+
+        if (!question) {
+          throw new Error("There is no active question to answer.");
+        }
+
+        const response = {
+          isCorrect: request.selectedOptionId === question.options[0]?.id,
+          correctOptionId: question.options[0]?.id ?? "option-1",
+          appliedRating:
+            request.selectedOptionId === question.options[0]?.id ? "good" : "again",
+          explanationPayload: {
+            targetWord: question.promptValue,
+            correctMeaning: question.options[0]?.value ?? question.promptValue,
+            exampleSentence: "I eat an apple.",
+          },
+          nextReviewSuggestion: {
+            summaryText: "本轮学习已完成。",
+          },
+          nextQuestion: undefined,
+          isSessionComplete: true,
+        } satisfies AnswerQuestionResponse;
+
+        activeSession = { question: undefined };
+        return response as unknown as TResponse;
       }
 
       if (command === "review.resetProgress") {

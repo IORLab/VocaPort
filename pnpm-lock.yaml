@@ -122,6 +122,9 @@ importers:
       vite:
         specifier: ^5.4.8
         version: 5.4.21(@types/node@24.13.2)
+      vite-plugin-wasm:
+        specifier: ^3.4.1
+        version: 3.6.0(vite@5.4.21(@types/node@24.13.2))
 
   packages/bridge-schema: {}
 
@@ -1508,6 +1511,11 @@ packages:
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
 
+  vite-plugin-wasm@3.6.0:
+    resolution: {integrity: sha512-mL/QPziiIA4RAA6DkaZZzOstdwbW5jO4Vz7Zenj0wieKWBlNvIvX5L5ljum9lcUX0ShNfBgCNLKTjNkRVVqcsw==}
+    peerDependencies:
+      vite: ^2 || ^3 || ^4 || ^5 || ^6 || ^7 || ^8
+
   vite@5.4.21:
     resolution: {integrity: sha512-o5a9xKjbtuhY6Bi5S3+HvbRERmouabWbyUcpXXUA1u+GNUKoROi9byOJ8M0nHbHYHkYICiMlqxkg1KkYmm25Sw==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -2850,6 +2858,10 @@ snapshots:
       - sugarss
       - supports-color
       - terser
+
+  vite-plugin-wasm@3.6.0(vite@5.4.21(@types/node@24.13.2)):
+    dependencies:
+      vite: 5.4.21(@types/node@24.13.2)
 
   vite@5.4.21(@types/node@24.13.2):
     dependencies:

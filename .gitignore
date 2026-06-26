@@ -11,6 +11,7 @@ coverage/
 
 target/
 apps/desktop-mobile/src-tauri/gen/
+apps/web/src/wasm/pkg/
 
 .idea/
 .vscode/

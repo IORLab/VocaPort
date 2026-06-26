@@ -1,16 +1,17 @@
 # VocaPort
 
-VocaPort is a Rust-first (Rust 优先), offline-first (离线优先) vocabulary learning app repository. The current `main` branch already contains the Phase 1 foundation (一期基础骨架): the goal is to support Anki `.apkg` import, preserve (保留) review history, reset study progress, and ship runnable Web / Desktop shells while keeping the architecture ready for Android expansion.
+VocaPort is a Rust-first (Rust 优先), offline-first (离线优先) vocabulary learning app repository. The current `main` branch already completes the Phase 1 delivery (一期交付): it supports Anki `.apkg` import, preserves (保留) review history, resets study progress, and ships a Rust-backed Web / Desktop study loop while keeping the architecture ready for Android expansion.
 
 ## Current Status
 
-- The Phase 1 foundation (一期基础骨架) has been merged into `main`.
-- The Web shell is runnable.
-- The Desktop Tauri shell is runnable locally.
+- Phase 1 is complete (已完成) and merged into `main`.
+- The Web shell now runs on the Rust/WASM runtime (运行时).
+- The Desktop Tauri shell now runs on the Rust native runtime (原生运行时).
+- Web and Desktop both support import preview, import commit, study start, session resume, answering, and progress reset.
+- Interrupted sessions now restore from durable snapshots (持久化快照): Web uses browser storage, and Desktop uses SQLite.
 - `apps/downloads` now provides a GitHub Pages download page that can be generated from GitHub Releases.
 - The Android build chain (构建链路) is integrated and can produce a multi-ABI (多架构) `universal debug APK`.
 - The latest multi-ABI (多架构) Android package has been verified to launch on at least one real device (真机).
-- The import / study flow is still demonstrated by the stub runtime (桩运行时) in `packages/ts-sdk`; the full Rust business pipeline (业务链路) is not wired into the frontend runtime yet.
 
 ## Repository Layout
 
@@ -18,7 +19,7 @@ VocaPort is a Rust-first (Rust 优先), offline-first (离线优先) vocabulary 
 - `apps/desktop-mobile`: shared frontend shell for Desktop / Android plus the Tauri native shell.
 - `apps/downloads`: GitHub Pages download site that surfaces the latest release, the latest prerelease, and older installers.
 - `packages/bridge-schema`: shared DTOs (数据传输对象) and bridge types.
-- `packages/ts-sdk`: frontend runtime adapter (运行时适配层); currently includes the stub runtime.
+- `packages/ts-sdk`: frontend runtime adapter (运行时适配层) plus stub helpers used for tests and fallback scenarios (回退场景).
 - `packages/ui`: cross-platform UI components and the Phase 1 workspace screen.
 - `crates/core_*`: core domain, events, permission, signature, module registry, and storage contracts.
 - `crates/modules/*`: Phase 1 modules for import, quiz generation, and scheduling.
@@ -30,7 +31,9 @@ VocaPort is a Rust-first (Rust 优先), offline-first (离线优先) vocabulary 
 
 - `pnpm@11.7.0`
 - A recent Node.js version is recommended; CI currently uses Node.js `24`
-- Rust stable toolchain
+- Rust stable toolchain with the `wasm32-unknown-unknown` target
+- `wasm-bindgen-cli@0.2.126`
+- On macOS, install Homebrew `llvm` if the system `clang` cannot target `wasm32-unknown-unknown`
 - Android SDK / NDK / JDK only when you need Android builds
 
 ## Quick Start
@@ -39,6 +42,7 @@ VocaPort is a Rust-first (Rust 优先), offline-first (离线优先) vocabulary 
 
 ```bash
 pnpm install
+cargo install wasm-bindgen-cli --version 0.2.126 --locked
 ```
 
 ### 2. Run the baseline checks
@@ -107,7 +111,7 @@ pnpm --filter @vocaport/desktop-mobile exec tauri android build --debug --apk
 
 ## Current Limitations
 
-- The import and study flow inside `packages/ts-sdk` is still stubbed (桩实现) and should not be treated as a completed end-to-end workflow.
+- `packages/ts-sdk` still keeps stub helpers (桩辅助工具), but the main Web / Desktop path already uses the real Rust runtime.
 - Android is currently verified on at least one real device, but that evidence should not be generalized to a broad device matrix (机型矩阵) yet.
 - Phase 1 does not include iOS, cloud sync, account systems, or runtime third-party plugin execution.
 - `apps/desktop-mobile/src-tauri/gen/android` is generated output (生成产物) and should not be treated as the long-term hand-edited source of truth.

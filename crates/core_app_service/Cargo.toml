@@ -1,0 +1,15 @@
+[package]
+name = "core_app_service"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+core_bridge_contract = { path = "../core_bridge_contract" }
+core_domain = { path = "../core_domain" }
+core_events = { path = "../core_events" }
+importer_apkg = { path = "../modules/importer_apkg" }
+quiz_mcq = { path = "../modules/quiz_mcq" }
+scheduler_fsrs = { path = "../modules/scheduler_fsrs" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
