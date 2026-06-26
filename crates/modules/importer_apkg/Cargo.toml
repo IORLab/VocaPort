@@ -1,0 +1,14 @@
+[package]
+name = "importer_apkg"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+core_bridge_contract = { path = "../../core_bridge_contract" }
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde_json = "1"
+sha2 = "0.10"
+tempfile = "3"
+thiserror = "1"
+uuid = { version = "1", features = ["v4"] }
+zip = "2"

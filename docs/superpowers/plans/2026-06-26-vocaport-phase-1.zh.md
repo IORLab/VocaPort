@@ -304,6 +304,41 @@
 4. 更新 Web / Desktop 壳层页面结构，露出五个核心入口。
 5. 重新跑 Web test、`typecheck` 和全量 Rust test，确认前端入口与底层契约对齐。
 
+### Task 10：用 GitHub Actions 固化 Android 壳构建证据，并决策本机工具链清理（先不执行）
+
+**状态：**
+
+- 先不执行
+- 当前 `M3` 推进先聚焦已在进行中的 Web / Desktop 壳与 Android 本机验证链路
+- 需要切换到 CI 路线时，再恢复执行本任务
+
+**目标：**
+
+- 为 `M3` 的 `Android 壳验证通过` 补一条可复现的 CI 构建证据链
+- 把 Android 壳验证从“依赖本机环境”收束为“优先依赖干净 CI 环境”
+- 在 CI 路线稳定后，明确本机 Android SDK / NDK / JDK 的保留或清理策略
+
+**文件：**
+
+- 创建 `.github/workflows/android-build.yml`
+- 参考 `docs/superpowers/plans/2026-06-26-github-actions-android-report.zh.md`
+- 参考 `docs/superpowers/plans/2026-06-26-github-actions-android-report.en.md`
+
+**接口产物：**
+
+- Android GitHub Actions build workflow
+- APK / AAB artifact 上传能力
+- Android 壳构建证据
+- 本机 Android 工具链保留 / 清理决策
+
+**执行步骤：**
+
+1. 新增 Android GitHub Actions workflow，在 `macos-latest` 上安装 `JDK`、Rust Android targets、Android SDK / NDK，并复用仓库已有的 `android:init` 与 `android:build` 脚本。
+2. 先在本地确认 `pnpm install --frozen-lockfile`、`pnpm typecheck`、`pnpm test` 仍然通过，避免把明显回归直接推到 CI。
+3. 推送分支并触发 workflow，要求 `tauri android init` 与 `tauri android build` 成功执行。
+4. 校验 workflow 已上传 APK / AAB artifact，把该构建结果记为 `M3` 的 Android 壳第一层证据。
+5. 根据是否还需要本机 Android 调试，二选一执行：保留本机 SDK / NDK / JDK；或按 `2026-06-26-github-actions-android-report` 中的顺序清理本机 Android 工具链。
+
 ## 自检清单
 
 ### 1. Spec 覆盖检查
@@ -313,6 +348,7 @@
 - 复习历史导入与进度重置覆盖在 Task 7。
 - `4` 选 `1` 混合题型覆盖在 Task 8。
 - Web / Desktop 壳、恢复当前会话入口与 Android-ready 路线覆盖在 Task 4 和 Task 9。
+- Android 壳的 CI 构建证据与本机工具链清理决策覆盖在 Task 10。
 
 ### 2. 占位与模糊项检查
 

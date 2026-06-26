@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "VocaPort",
+  "identifier": "com.vocaport.app",
+  "build": {
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "VocaPort",
+        "width": 1280,
+        "height": 800
+      }
+    ]
+  }
+}
