@@ -7,8 +7,10 @@
 node_modules/
 dist/
 coverage/
+.turbo/
 
 target/
+apps/desktop-mobile/src-tauri/gen/
 
 .idea/
 .vscode/
