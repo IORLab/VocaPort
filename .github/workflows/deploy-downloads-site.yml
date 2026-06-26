@@ -23,7 +23,16 @@ permissions:
   id-token: write
 
 jobs:
+  pages-unavailable:
+    if: ${{ github.event.repository.private }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain why GitHub Pages is skipped
+        run: >
+          echo "GitHub Pages deployment is skipped because this repository is private and the current plan does not support Pages for it."
+
   build-site:
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -67,6 +76,7 @@ jobs:
           path: apps/downloads/dist
 
   deploy-site:
+    if: ${{ !github.event.repository.private }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

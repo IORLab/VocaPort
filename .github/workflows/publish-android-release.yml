@@ -135,7 +135,17 @@ jobs:
           --clobber
           --repo "$GITHUB_REPOSITORY"
 
+  pages-unavailable:
+    if: ${{ github.event.repository.private }}
+    needs: build-android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain why GitHub Pages is skipped
+        run: >
+          echo "Android release assets were uploaded, but GitHub Pages is skipped because this repository is private and the current plan does not support Pages for it."
+
   build-site:
+    if: ${{ !github.event.repository.private }}
     needs: build-android
     runs-on: ubuntu-latest
     steps:
@@ -208,6 +218,7 @@ jobs:
           path: apps/downloads/dist
 
   deploy-site:
+    if: ${{ !github.event.repository.private }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

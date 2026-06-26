@@ -98,6 +98,7 @@ pnpm --filter @vocaport/desktop-mobile exec tauri android build --debug --apk
 
 - `packages/ts-sdk` 里的学习和导入流程仍是 stub 行为，不能视为真实端到端业务已完成。
 - Android 当前只确认“至少一台真机可正常启动”，还不能外推为全部机型都已验证通过。
+- 当前仓库保持私有时，GitHub Pages 下载页 workflow 会因仓库套餐限制被自动跳过；要公开托管该页面，需要切到支持 Pages 的仓库形态。
 - 一期不包含 iOS、云同步、账号系统和运行时第三方插件执行。
 - `apps/desktop-mobile/src-tauri/gen/android` 是生成产物目录，不应被当作长期维护的手写源码入口。
 

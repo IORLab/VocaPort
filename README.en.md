@@ -98,6 +98,7 @@ pnpm --filter @vocaport/desktop-mobile exec tauri android build --debug --apk
 
 - The import and study flow inside `packages/ts-sdk` is still stubbed (桩实现) and should not be treated as a completed end-to-end workflow.
 - Android is currently verified on at least one real device, but that evidence should not be generalized to a broad device matrix (机型矩阵) yet.
+- While this repository stays private, the GitHub Pages workflow for `apps/downloads` is skipped automatically because the current plan does not support Pages for it.
 - Phase 1 does not include iOS, cloud sync, account systems, or runtime third-party plugin execution.
 - `apps/desktop-mobile/src-tauri/gen/android` is generated output (生成产物) and should not be treated as the long-term hand-edited source of truth.
 
