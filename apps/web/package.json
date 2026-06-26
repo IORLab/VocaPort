@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@vocaport/bridge-schema": "workspace:*",
     "@vocaport/ts-sdk": "workspace:*",
     "@vocaport/ui": "workspace:*",
     "react": "^18.3.1",

@@ -54,6 +54,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@vocaport/bridge-schema':
+        specifier: workspace:*
+        version: link:../../packages/bridge-schema
       '@vocaport/ts-sdk':
         specifier: workspace:*
         version: link:../../packages/ts-sdk
