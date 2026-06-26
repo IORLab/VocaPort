@@ -46,7 +46,6 @@ jobs:
     env:
       ANDROID_HOME: ${{ github.workspace }}/.android-sdk
       ANDROID_SDK_ROOT: ${{ github.workspace }}/.android-sdk
-      RELEASE_ASSET_DIR: ${{ runner.temp }}/release-assets
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -116,7 +115,7 @@ jobs:
           --architecture universal
           --release-tag "$RELEASE_TAG"
           --search-root apps/desktop-mobile/src-tauri/gen/android/app/build/outputs/apk
-          --output-dir "$RELEASE_ASSET_DIR"
+          --output-dir "$RUNNER_TEMP/release-assets"
 
       - name: Upload prepared Android release assets
         uses: actions/upload-artifact@v4
@@ -164,8 +163,6 @@ jobs:
             target: aarch64-apple-darwin
             search_root: apps/desktop-mobile/src-tauri/target/aarch64-apple-darwin/release/bundle
             artifact_name: release-assets-macos-arm64
-    env:
-      RELEASE_ASSET_DIR: ${{ runner.temp }}/release-assets
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -230,7 +227,7 @@ jobs:
           --architecture "${{ matrix.architecture }}"
           --release-tag "$RELEASE_TAG"
           --search-root "${{ matrix.search_root }}"
-          --output-dir "$RELEASE_ASSET_DIR"
+          --output-dir "$RUNNER_TEMP/release-assets"
 
       - name: Upload prepared desktop release assets
         uses: actions/upload-artifact@v4
@@ -247,8 +244,6 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    env:
-      RELEASE_ASSET_DIR: ${{ runner.temp }}/release-assets
     steps:
       - name: Download prepared release assets
         uses: actions/download-artifact@v4
@@ -263,7 +258,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.prepare-release.outputs.release_tag }}
         run: |
-          mapfile -t asset_paths < <(find "$RELEASE_ASSET_DIR" -maxdepth 1 -type f | sort)
+          mapfile -t asset_paths < <(find "$RUNNER_TEMP/release-assets" -maxdepth 1 -type f | sort)
 
           if [ "${#asset_paths[@]}" -eq 0 ]; then
             echo "No release assets were prepared." >&2
