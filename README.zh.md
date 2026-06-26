@@ -94,11 +94,21 @@ pnpm --filter @vocaport/desktop-mobile exec tauri android build --debug --apk
 | `cargo test --workspace` | 运行 Rust workspace 测试 |
 | `cargo check -p vocaport_native_shell` | 校验 Tauri Native 壳 |
 
+## 开源协议
+
+- 当前仓库按 `AGPL-3.0-only` 发布，完整协议见 [`LICENSE`](./LICENSE)。
+- 如果未来部署了带 AGPL 覆盖修改的联网版本，需要按 AGPL 第 13 节向远程用户提供对应源码入口。
+
+## 贡献与 CLA
+
+- 外部贡献在合并前必须确认 [`CLA.zh.md`](./CLA.zh.md) / [`CLA.en.md`](./CLA.en.md)。
+- 当前先通过 pull request 模板中的勾选项完成确认；后续如果需要，可以再接入自动化 CLA 流程。
+- `CLA` 的目标不是转走贡献者版权，而是为项目保留后续双授权、商用授权或协议调整的再授权空间。
+
 ## 当前限制
 
 - `packages/ts-sdk` 里的学习和导入流程仍是 stub 行为，不能视为真实端到端业务已完成。
 - Android 当前只确认“至少一台真机可正常启动”，还不能外推为全部机型都已验证通过。
-- 当前仓库保持私有时，GitHub Pages 下载页 workflow 会因仓库套餐限制被自动跳过；要公开托管该页面，需要切到支持 Pages 的仓库形态。
 - 一期不包含 iOS、云同步、账号系统和运行时第三方插件执行。
 - `apps/desktop-mobile/src-tauri/gen/android` 是生成产物目录，不应被当作长期维护的手写源码入口。
 

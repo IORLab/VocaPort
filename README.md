@@ -23,6 +23,12 @@ pnpm --filter @vocaport/downloads dev
 pnpm --filter @vocaport/desktop-mobile exec tauri dev
 ```
 
+## License / 开源协议
+
+- `VocaPort` is currently licensed under `AGPL-3.0-only`.
+- See [`LICENSE`](./LICENSE) for the full license text.
+- External contributions must also follow [`CLA.zh.md`](./CLA.zh.md) / [`CLA.en.md`](./CLA.en.md).
+
 ## References / 参考资料
 
 - Product and architecture design:

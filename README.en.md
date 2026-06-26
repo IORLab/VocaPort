@@ -94,11 +94,21 @@ pnpm --filter @vocaport/desktop-mobile exec tauri android build --debug --apk
 | `cargo test --workspace` | Run the Rust workspace tests |
 | `cargo check -p vocaport_native_shell` | Verify the Tauri native shell |
 
+## License
+
+- The repository is currently licensed under `AGPL-3.0-only`; see [`LICENSE`](./LICENSE) for the full text.
+- If the project later ships a modified network-facing version, AGPL section 13 requires operators to offer the corresponding source to remote users (远程用户).
+
+## Contributing And CLA
+
+- External contributions must be confirmed under [`CLA.zh.md`](./CLA.zh.md) / [`CLA.en.md`](./CLA.en.md) before merge.
+- For now, the confirmation is handled through the pull request template. A dedicated CLA automation flow can be added later if needed.
+- The CLA is meant to preserve relicensing flexibility (再授权灵活性) for future dual licensing, commercial licensing, or repository license changes, not to transfer contributor copyright by default.
+
 ## Current Limitations
 
 - The import and study flow inside `packages/ts-sdk` is still stubbed (桩实现) and should not be treated as a completed end-to-end workflow.
 - Android is currently verified on at least one real device, but that evidence should not be generalized to a broad device matrix (机型矩阵) yet.
-- While this repository stays private, the GitHub Pages workflow for `apps/downloads` is skipped automatically because the current plan does not support Pages for it.
 - Phase 1 does not include iOS, cloud sync, account systems, or runtime third-party plugin execution.
 - `apps/desktop-mobile/src-tauri/gen/android` is generated output (生成产物) and should not be treated as the long-term hand-edited source of truth.
 
