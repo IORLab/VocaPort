@@ -15,6 +15,7 @@ export interface GitHubReleasePayload {
   name: string | null;
   tag_name: string;
   html_url: string;
+  body?: string | null;
   draft: boolean;
   prerelease: boolean;
   published_at: string;

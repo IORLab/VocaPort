@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it } from "vitest";
 import { DownloadsPage } from "./App";
 import { sampleCatalog } from "./fixtures";
+import { getCopy } from "./i18n";
+
+afterEach(() => {
+  cleanup();
+});
 
 describe("downloads page", () => {
   it("renders latest stable, latest preview, and older release downloads", () => {
@@ -48,7 +54,7 @@ describe("downloads page", () => {
     expect(
       within(moreDownloadsSection as HTMLElement)
         .getByRole("link", {
-          name: "Release notes",
+          name: "View on GitHub",
         })
         .getAttribute("href"),
     ).toBe("https://example.com/releases/v1.0.0");
@@ -67,5 +73,44 @@ describe("downloads page", () => {
     );
 
     expect(screen.getByText("No downloadable packages yet.")).toBeTruthy();
+  });
+
+  it("switches language and expands localized release notes inline", async () => {
+    const user = userEvent.setup();
+
+    render(<DownloadsPage catalog={sampleCatalog} />);
+
+    expect(
+      screen.getByRole("heading", { name: getCopy("en").heroTitle }),
+    ).toBeTruthy();
+
+    const latestPrereleaseSection = screen.getByText("Latest prerelease").closest(
+      "section",
+    );
+
+    expect(latestPrereleaseSection).toBeTruthy();
+
+    await user.click(
+      within(latestPrereleaseSection as HTMLElement).getByRole("button", {
+        name: "Release notes",
+      }),
+    );
+
+    expect(screen.getByText("Included in this release")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "The Web / Desktop / Android shells are now publicly available.",
+      ),
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "中文" }));
+
+    expect(
+      screen.getByRole("heading", { name: getCopy("zh").heroTitle }),
+    ).toBeTruthy();
+    expect(screen.getByText("本次包含")).toBeTruthy();
+    expect(
+      screen.getByText("Web / Desktop / Android 壳层已公开可用。"),
+    ).toBeTruthy();
   });
 });

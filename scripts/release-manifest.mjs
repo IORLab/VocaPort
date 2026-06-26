@@ -28,6 +28,7 @@ function mapRelease(release) {
     htmlUrl: release.html_url,
     isPrerelease: release.prerelease,
     publishedAt: release.published_at,
+    releaseNotesMarkdown: release.body || "",
     assets: release.assets.map((asset) => ({
       id: asset.id,
       name: asset.name,

@@ -1,3 +1,4 @@
+import type { Locale } from "./i18n";
 import type { ReleaseAsset, ReleaseCatalog, ReleaseRecord } from "./types";
 
 export interface ReleaseSections {
@@ -35,57 +36,57 @@ export function selectReleaseSections(catalog: ReleaseCatalog): ReleaseSections 
   };
 }
 
-export function inferAssetLabel(asset: ReleaseAsset) {
+export function inferAssetLabel(asset: ReleaseAsset, locale: Locale) {
   const normalizedName = asset.name.toLowerCase();
 
   if (
     normalizedName.endsWith(".apk") ||
     asset.contentType === "application/vnd.android.package-archive"
   ) {
-    return "Download Android APK";
+    return locale === "zh" ? "下载 Android APK" : "Download Android APK";
   }
 
   if (normalizedName.endsWith(".dmg")) {
-    return "Download macOS DMG";
+    return locale === "zh" ? "下载 macOS DMG" : "Download macOS DMG";
   }
 
   if (normalizedName.endsWith(".pkg")) {
-    return "Download macOS PKG";
+    return locale === "zh" ? "下载 macOS PKG" : "Download macOS PKG";
   }
 
   if (normalizedName.endsWith(".msi")) {
-    return "Download Windows MSI";
+    return locale === "zh" ? "下载 Windows MSI" : "Download Windows MSI";
   }
 
   if (normalizedName.endsWith(".exe")) {
-    return "Download Windows EXE";
+    return locale === "zh" ? "下载 Windows EXE" : "Download Windows EXE";
   }
 
   if (normalizedName.endsWith(".appimage")) {
-    return "Download Linux AppImage";
+    return locale === "zh" ? "下载 Linux AppImage" : "Download Linux AppImage";
   }
 
   if (normalizedName.endsWith(".deb")) {
-    return "Download Linux DEB";
+    return locale === "zh" ? "下载 Linux DEB" : "Download Linux DEB";
   }
 
   if (normalizedName.endsWith(".rpm")) {
-    return "Download Linux RPM";
+    return locale === "zh" ? "下载 Linux RPM" : "Download Linux RPM";
   }
 
   if (normalizedName.endsWith(".zip")) {
-    return "Download ZIP archive";
+    return locale === "zh" ? "下载 ZIP 压缩包" : "Download ZIP archive";
   }
 
   if (normalizedName.endsWith(".tar.gz") || normalizedName.endsWith(".tgz")) {
-    return "Download tarball";
+    return locale === "zh" ? "下载 tarball" : "Download tarball";
   }
 
-  return `Download ${asset.name}`;
+  return locale === "zh" ? `下载 ${asset.name}` : `Download ${asset.name}`;
 }
 
-export function formatReleaseDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
+export function formatReleaseDate(value: string, locale: Locale) {
+  return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));

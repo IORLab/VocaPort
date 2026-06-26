@@ -1,11 +1,31 @@
 import type { ReleaseCatalog } from "./types";
 
+const sampleReleaseNotes = `## 中文
+
+VocaPort 第一版公开 Beta。
+
+### 本次包含
+- Web / Desktop / Android 壳层已公开可用。
+- 已附带 Android universal debug APK。
+
+---
+
+## English
+
+First public beta release of VocaPort.
+
+### Included in this release
+- The Web / Desktop / Android shells are now publicly available.
+- Includes an Android universal debug APK.
+`;
+
 export const sampleGithubReleases = [
   {
     id: 301,
     name: "VocaPort v1.1.0-beta.1",
     tag_name: "v1.1.0-beta.1",
     html_url: "https://example.com/releases/v1.1.0-beta.1",
+    body: sampleReleaseNotes,
     draft: false,
     prerelease: true,
     published_at: "2026-06-26T09:00:00.000Z",
@@ -27,6 +47,7 @@ export const sampleGithubReleases = [
     name: "VocaPort v1.0.1",
     tag_name: "v1.0.1",
     html_url: "https://example.com/releases/v1.0.1",
+    body: sampleReleaseNotes,
     draft: false,
     prerelease: false,
     published_at: "2026-06-25T09:00:00.000Z",
@@ -48,6 +69,7 @@ export const sampleGithubReleases = [
     name: "VocaPort v1.0.0",
     tag_name: "v1.0.0",
     html_url: "https://example.com/releases/v1.0.0",
+    body: sampleReleaseNotes,
     draft: false,
     prerelease: false,
     published_at: "2026-06-24T09:00:00.000Z",
@@ -69,6 +91,7 @@ export const sampleGithubReleases = [
     name: "Draft",
     tag_name: "v0.9.9",
     html_url: "https://example.com/releases/v0.9.9",
+    body: "",
     draft: true,
     prerelease: false,
     published_at: "2026-06-20T09:00:00.000Z",
@@ -88,6 +111,7 @@ export const sampleCatalog: ReleaseCatalog = {
       htmlUrl: "https://example.com/releases/v1.1.0-beta.1",
       isPrerelease: true,
       publishedAt: "2026-06-26T09:00:00.000Z",
+      releaseNotesMarkdown: sampleReleaseNotes,
       assets: [
         {
           id: 11,
@@ -108,6 +132,7 @@ export const sampleCatalog: ReleaseCatalog = {
       htmlUrl: "https://example.com/releases/v1.0.1",
       isPrerelease: false,
       publishedAt: "2026-06-25T09:00:00.000Z",
+      releaseNotesMarkdown: sampleReleaseNotes,
       assets: [
         {
           id: 12,
@@ -128,6 +153,7 @@ export const sampleCatalog: ReleaseCatalog = {
       htmlUrl: "https://example.com/releases/v1.0.0",
       isPrerelease: false,
       publishedAt: "2026-06-24T09:00:00.000Z",
+      releaseNotesMarkdown: sampleReleaseNotes,
       assets: [
         {
           id: 13,

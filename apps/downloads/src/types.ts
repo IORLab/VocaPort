@@ -15,6 +15,7 @@ export interface ReleaseRecord {
   htmlUrl: string;
   isPrerelease: boolean;
   publishedAt: string;
+  releaseNotesMarkdown: string;
   assets: ReleaseAsset[];
 }
 
