@@ -2558,6 +2558,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "quiz_mcq"
+version = "0.0.0"
+dependencies = [
+ "core_bridge_contract",
+ "core_domain",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"

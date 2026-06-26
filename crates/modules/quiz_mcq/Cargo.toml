@@ -1,0 +1,8 @@
+[package]
+name = "quiz_mcq"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+core_bridge_contract = { path = "../../core_bridge_contract" }
+core_domain = { path = "../../core_domain" }
