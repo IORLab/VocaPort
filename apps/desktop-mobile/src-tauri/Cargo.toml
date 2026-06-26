@@ -1,0 +1,11 @@
+[package]
+name = "vocaport_native_shell"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[lib]
+name = "vocaport_native_shell"
+crate-type = ["staticlib", "cdylib", "rlib"]
