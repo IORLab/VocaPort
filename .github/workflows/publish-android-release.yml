@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Existing GitHub release tag to receive the Android APK
+        description: Existing GitHub release tag to receive the Android Beta APK
         required: true
         type: string
 
@@ -107,27 +107,27 @@ jobs:
       - name: Initialize Android project
         run: pnpm --filter @vocaport/desktop-mobile run android:init
 
-      - name: Build universal Android debug APK
-        run: pnpm --filter @vocaport/desktop-mobile exec tauri android build --debug --apk
+      - name: Build universal Android beta APK
+        run: pnpm --filter @vocaport/desktop-mobile exec tauri android build --apk
 
-      - name: Prepare Android release asset
+      - name: Prepare Android beta release asset
         id: prepare-asset
         env:
           RELEASE_TAG: ${{ steps.resolve-release-tag.outputs.value }}
         run: |
-          source_path="apps/desktop-mobile/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk"
+          source_path="$(find apps/desktop-mobile/src-tauri/gen/android/app/build/outputs/apk -name 'app-universal-release*.apk' | head -n 1)"
           if [ ! -f "$source_path" ]; then
-            echo "Missing Android APK at $source_path" >&2
+            echo "Missing Android beta APK output." >&2
             exit 1
           fi
           asset_dir="$RUNNER_TEMP/release-assets"
           mkdir -p "$asset_dir"
-          asset_name="vocaport-${RELEASE_TAG}-android-universal-debug.apk"
+          asset_name="vocaport-${RELEASE_TAG}-android-universal-beta.apk"
           asset_path="$asset_dir/$asset_name"
           cp "$source_path" "$asset_path"
           echo "path=$asset_path" >> "$GITHUB_OUTPUT"
 
-      - name: Upload APK to GitHub Release
+      - name: Upload Beta APK to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.resolve-release-tag.outputs.value }}

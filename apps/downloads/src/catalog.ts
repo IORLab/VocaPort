@@ -43,6 +43,12 @@ export function inferAssetLabel(asset: ReleaseAsset, locale: Locale) {
     normalizedName.endsWith(".apk") ||
     asset.contentType === "application/vnd.android.package-archive"
   ) {
+    if (normalizedName.includes("beta")) {
+      return locale === "zh"
+        ? "下载 Android Beta APK"
+        : "Download Android Beta APK";
+    }
+
     return locale === "zh" ? "下载 Android APK" : "Download Android APK";
   }
 

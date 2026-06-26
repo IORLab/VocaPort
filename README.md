@@ -10,8 +10,10 @@
 - Import preview, commit, study start, answer submission, resume, and progress reset are wired end-to-end.
 - Interrupted sessions now restore from durable snapshots on both Web and Desktop.
 - A dedicated downloads page can be built from GitHub Releases through GitHub Pages.
-- The Android build chain can produce a universal debug APK.
-- The latest multi-ABI Android package has been verified to launch on at least one real device.
+- The Android build chain can produce a universal beta APK for release distribution.
+- The latest multi-ABI Android beta package has been verified to launch on at least one real device.
+- Android prereleases are distributed as Beta APK assets through GitHub Releases and mirrored on the GitHub Pages downloads site.
+- Android release automation should load signing material from repository secrets instead of checking keystore files into the repo.
 
 ## Quick Start / 快速开始
 

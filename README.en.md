@@ -10,8 +10,10 @@ VocaPort is a Rust-first (Rust 优先), offline-first (离线优先) vocabulary 
 - Web and Desktop both support import preview, import commit, study start, session resume, answering, and progress reset.
 - Interrupted sessions now restore from durable snapshots (持久化快照): Web uses browser storage, and Desktop uses SQLite.
 - `apps/downloads` now provides a GitHub Pages download page that can be generated from GitHub Releases.
-- The Android build chain (构建链路) is integrated and can produce a multi-ABI (多架构) `universal debug APK`.
-- The latest multi-ABI (多架构) Android package has been verified to launch on at least one real device (真机).
+- The Android build chain (构建链路) is integrated and can produce a multi-ABI (多架构) `universal beta APK` for release distribution (发布分发).
+- The latest multi-ABI (多架构) Android beta package has been verified to launch on at least one real device (真机).
+- Android prereleases are distributed as Beta APK assets through GitHub Releases and mirrored on the GitHub Pages downloads site.
+- Android release automation should load signing material from repository secrets instead of checking keystore files into the repository.
 
 ## Repository Layout
 
@@ -77,13 +79,13 @@ pnpm --filter @vocaport/desktop-mobile dev
 pnpm --filter @vocaport/desktop-mobile exec tauri dev
 ```
 
-### 7. Build the Android debug package
+### 7. Build the Android beta package
 
 First install the Android toolchain (工具链), then run:
 
 ```bash
 pnpm --filter @vocaport/desktop-mobile run android:init
-pnpm --filter @vocaport/desktop-mobile exec tauri android build --debug --apk
+pnpm --filter @vocaport/desktop-mobile exec tauri android build --apk
 ```
 
 ## Common Commands

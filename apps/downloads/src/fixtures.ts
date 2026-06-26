@@ -6,7 +6,7 @@ VocaPort 第一版公开 Beta。
 
 ### 本次包含
 - Web / Desktop / Android 壳层已公开可用。
-- 已附带 Android universal debug APK。
+- 已附带 Android universal beta APK。
 
 ---
 
@@ -16,7 +16,7 @@ First public beta release of VocaPort.
 
 ### Included in this release
 - The Web / Desktop / Android shells are now publicly available.
-- Includes an Android universal debug APK.
+- Includes an Android universal beta APK.
 `;
 
 export const sampleGithubReleases = [
@@ -32,9 +32,9 @@ export const sampleGithubReleases = [
     assets: [
       {
         id: 11,
-        name: "vocaport-v1.1.0-beta.1-android.apk",
+        name: "vocaport-v1.1.0-beta.1-android-universal-beta.apk",
         browser_download_url:
-          "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-android.apk",
+          "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-android-universal-beta.apk",
         content_type: "application/vnd.android.package-archive",
         size: 124000000,
         download_count: 3,
@@ -54,9 +54,9 @@ export const sampleGithubReleases = [
     assets: [
       {
         id: 12,
-        name: "vocaport-v1.0.1-android.apk",
+        name: "vocaport-v1.0.1-android-universal-beta.apk",
         browser_download_url:
-          "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-android.apk",
+          "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-android-universal-beta.apk",
         content_type: "application/vnd.android.package-archive",
         size: 123000000,
         download_count: 10,
@@ -76,9 +76,9 @@ export const sampleGithubReleases = [
     assets: [
       {
         id: 13,
-        name: "vocaport-v1.0.0-android.apk",
+        name: "vocaport-v1.0.0-android-universal-beta.apk",
         browser_download_url:
-          "https://example.com/downloads/v1.0.0/vocaport-v1.0.0-android.apk",
+          "https://example.com/downloads/v1.0.0/vocaport-v1.0.0-android-universal-beta.apk",
         content_type: "application/vnd.android.package-archive",
         size: 122000000,
         download_count: 14,
@@ -115,9 +115,9 @@ export const sampleCatalog: ReleaseCatalog = {
       assets: [
         {
           id: 11,
-          name: "vocaport-v1.1.0-beta.1-android.apk",
+          name: "vocaport-v1.1.0-beta.1-android-universal-beta.apk",
           downloadUrl:
-            "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-android.apk",
+            "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-android-universal-beta.apk",
           contentType: "application/vnd.android.package-archive",
           sizeBytes: 124000000,
           downloadCount: 3,
@@ -136,9 +136,9 @@ export const sampleCatalog: ReleaseCatalog = {
       assets: [
         {
           id: 12,
-          name: "vocaport-v1.0.1-android.apk",
+          name: "vocaport-v1.0.1-android-universal-beta.apk",
           downloadUrl:
-            "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-android.apk",
+            "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-android-universal-beta.apk",
           contentType: "application/vnd.android.package-archive",
           sizeBytes: 123000000,
           downloadCount: 10,
@@ -157,9 +157,9 @@ export const sampleCatalog: ReleaseCatalog = {
       assets: [
         {
           id: 13,
-          name: "vocaport-v1.0.0-android.apk",
+          name: "vocaport-v1.0.0-android-universal-beta.apk",
           downloadUrl:
-            "https://example.com/downloads/v1.0.0/vocaport-v1.0.0-android.apk",
+            "https://example.com/downloads/v1.0.0/vocaport-v1.0.0-android-universal-beta.apk",
           contentType: "application/vnd.android.package-archive",
           sizeBytes: 122000000,
           downloadCount: 14,

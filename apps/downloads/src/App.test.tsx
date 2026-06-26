@@ -23,11 +23,11 @@ describe("downloads page", () => {
     expect(
       within(latestStableSection as HTMLElement)
         .getByRole("link", {
-          name: /Download Android APK/,
+          name: /Download Android Beta APK/,
         })
         .getAttribute("href"),
     ).toBe(
-      "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-android.apk",
+      "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-android-universal-beta.apk",
     );
 
     const latestPrereleaseSection = screen.getByText("Latest prerelease").closest(
