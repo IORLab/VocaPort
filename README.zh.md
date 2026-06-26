@@ -122,10 +122,18 @@ pnpm --filter @vocaport/desktop-mobile exec tauri android build --debug --apk
   [`docs/superpowers/specs/2026-06-26-vocaport-design.zh.md`](./docs/superpowers/specs/2026-06-26-vocaport-design.zh.md)
   /
   [`docs/superpowers/specs/2026-06-26-vocaport-design.en.md`](./docs/superpowers/specs/2026-06-26-vocaport-design.en.md)
+- 总路线图：
+  [`docs/superpowers/specs/2026-06-26-vocaport-roadmap.zh.md`](./docs/superpowers/specs/2026-06-26-vocaport-roadmap.zh.md)
+  /
+  [`docs/superpowers/specs/2026-06-26-vocaport-roadmap.en.md`](./docs/superpowers/specs/2026-06-26-vocaport-roadmap.en.md)
 - 一期实现计划：
   [`docs/superpowers/plans/2026-06-26-vocaport-phase-1.zh.md`](./docs/superpowers/plans/2026-06-26-vocaport-phase-1.zh.md)
   /
   [`docs/superpowers/plans/2026-06-26-vocaport-phase-1.en.md`](./docs/superpowers/plans/2026-06-26-vocaport-phase-1.en.md)
+- 二期实现计划：
+  [`docs/superpowers/plans/2026-06-26-vocaport-phase-2.zh.md`](./docs/superpowers/plans/2026-06-26-vocaport-phase-2.zh.md)
+  /
+  [`docs/superpowers/plans/2026-06-26-vocaport-phase-2.en.md`](./docs/superpowers/plans/2026-06-26-vocaport-phase-2.en.md)
 - Android 构建与环境报告：
   [`docs/superpowers/plans/2026-06-26-github-actions-android-report.zh.md`](./docs/superpowers/plans/2026-06-26-github-actions-android-report.zh.md)
   /
