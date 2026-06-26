@@ -54,6 +54,25 @@ fn commit_returns_structured_import_summary() {
 }
 
 #[test]
+fn preview_lists_all_available_fields_for_manual_mapping() {
+    let fixture_path = format!(
+        "{}/../../../fixtures/anki/basic-vocab.apkg",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let bytes = std::fs::read(fixture_path).unwrap();
+    let preview = preview_apkg("basic-vocab.apkg", &bytes).unwrap();
+
+    assert_eq!(
+        preview.available_field_names,
+        vec![
+            "Back".to_string(),
+            "Example".to_string(),
+            "Front".to_string(),
+        ]
+    );
+}
+
+#[test]
 fn load_imported_deck_bundle_imports_review_history_from_revlog() {
     let bytes = build_apkg_fixture_with_review_history();
     let preview = preview_apkg("history.apkg", &bytes).unwrap();

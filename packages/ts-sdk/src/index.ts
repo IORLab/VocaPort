@@ -42,6 +42,7 @@ const previewResponse: ImportPreviewResponse = {
   entryCount: 1,
   reviewEventCount: 0,
   mediaCount: 0,
+  availableFieldNames: ["Back", "Example", "Front"],
   fieldCandidates: {
     lemma: { fieldName: "Front", confidence: 100 },
     meaning: { fieldName: "Back", confidence: 100 },

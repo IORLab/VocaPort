@@ -61,6 +61,7 @@ pub fn preview_apkg(
     let review_event_count = count_optional_rows(&connection, "revlog")?;
     let media_count = extract_media_count(&mut archive)?;
     let deck_id = slugify_deck_id(&deck_name);
+    let available_field_names = normalize_field_names(&field_names);
 
     let mut hasher = Sha256::new();
     hasher.update(file_bytes);
@@ -74,6 +75,7 @@ pub fn preview_apkg(
         entry_count,
         review_event_count,
         media_count,
+        available_field_names,
         field_candidates: build_field_candidates(&field_names),
         unresolved_fields: Vec::new(),
         warning_messages: Vec::new(),
@@ -402,6 +404,18 @@ fn build_field_index(field_names: &[String]) -> HashMap<String, usize> {
         .enumerate()
         .map(|(index, field_name)| (field_name.trim().to_ascii_lowercase(), index))
         .collect()
+}
+
+fn normalize_field_names(field_names: &[String]) -> Vec<String> {
+    let mut available_field_names = field_names
+        .iter()
+        .map(|field_name| field_name.trim().to_string())
+        .filter(|field_name| !field_name.is_empty())
+        .collect::<Vec<_>>();
+
+    available_field_names.sort();
+    available_field_names.dedup();
+    available_field_names
 }
 
 fn required_field_index(

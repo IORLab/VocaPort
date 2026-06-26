@@ -138,6 +138,7 @@ export interface ImportPreviewResponse {
   entryCount: number;
   reviewEventCount: number;
   mediaCount: number;
+  availableFieldNames: string[];
   fieldCandidates: FieldCandidateSet;
   unresolvedFields: string[];
   warningMessages: string[];

@@ -47,6 +47,7 @@ pub struct ImportPreviewResponse {
     pub entry_count: usize,
     pub review_event_count: usize,
     pub media_count: usize,
+    pub available_field_names: Vec<String>,
     pub field_candidates: FieldCandidateSet,
     pub unresolved_fields: Vec<String>,
     pub warning_messages: Vec<String>,
