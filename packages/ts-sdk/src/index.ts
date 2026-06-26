@@ -2,13 +2,17 @@ export type {
   ActiveSessionResponse,
   AnswerQuestionRequest,
   AnswerQuestionResponse,
+  DeckSummaryDto,
   ImportCommitRequest,
   ImportCommitResponse,
   ImportPreviewRequest,
   ImportPreviewResponse,
+  ListDecksResponse,
   ModuleManifest,
   QuestionDto,
   ResetProgressRequest,
+  SelectDeckRequest,
+  SelectDeckResponse,
   StartSessionRequest,
 } from "@vocaport/bridge-schema";
 
@@ -16,12 +20,16 @@ import type {
   ActiveSessionResponse,
   AnswerQuestionRequest,
   AnswerQuestionResponse,
+  DeckSummaryDto,
   ImportCommitRequest,
   ImportCommitResponse,
   ImportPreviewRequest,
   ImportPreviewResponse,
+  ListDecksResponse,
   QuestionDto,
   ResetProgressRequest,
+  SelectDeckRequest,
+  SelectDeckResponse,
   StartSessionRequest,
 } from "@vocaport/bridge-schema";
 
@@ -96,6 +104,24 @@ export function createPhaseOneStubRuntime(
   let activeSession: ActiveSessionResponse = {
     question: undefined,
   };
+  let activeSessionDeckId: string | undefined;
+  let currentDeckId: string | undefined;
+  let deckSummaries: DeckSummaryDto[] = [];
+
+  function buildDeckListResponse(): ListDecksResponse {
+    return {
+      decks: [...deckSummaries]
+        .map((deck) => ({
+          ...deck,
+          hasActiveSession: activeSessionDeckId === deck.deckId,
+          isCurrentDeck: currentDeckId === deck.deckId,
+        }))
+        .sort((left, right) =>
+          left.deckName.localeCompare(right.deckName) ||
+          left.deckId.localeCompare(right.deckId),
+        ),
+    };
+  }
 
   return {
     async healthPing() {
@@ -127,11 +153,43 @@ export function createPhaseOneStubRuntime(
 
       if (command === "import.commitApkg") {
         const request = payload as ImportCommitRequest;
+        const deckId = request.targetDeckId ?? commitResponse.deckId;
+
+        deckSummaries = [
+          ...deckSummaries.filter((deck) => deck.deckId !== deckId),
+          {
+            deckId,
+            deckName: commitResponse.deckName,
+            entryCount: commitResponse.importedEntryCount,
+            cardCount: commitResponse.importedCardCount,
+            reviewEventCount: commitResponse.importedReviewEventCount,
+            dueCount: commitResponse.importedCardCount,
+            hasActiveSession: false,
+            isCurrentDeck: currentDeckId === deckId,
+            lastImportedAt: "2026-06-26T00:00:00Z",
+          },
+        ];
 
         return {
           ...commitResponse,
-          deckId: request.targetDeckId ?? commitResponse.deckId,
+          deckId,
         } as unknown as TResponse;
+      }
+
+      if (command === "library.listDecks") {
+        return buildDeckListResponse() as TResponse;
+      }
+
+      if (command === "library.selectDeck") {
+        const request = payload as SelectDeckRequest;
+        if (!deckSummaries.some((deck) => deck.deckId === request.deckId)) {
+          throw new Error(`deck \`${request.deckId}\` has not been imported yet`);
+        }
+
+        currentDeckId = request.deckId;
+        return {
+          deckId: request.deckId,
+        } satisfies SelectDeckResponse as TResponse;
       }
 
       if (command === "quiz.getActiveSession") {
@@ -145,6 +203,7 @@ export function createPhaseOneStubRuntime(
           sessionId: `${request.deckId}-session`,
         } satisfies QuestionDto;
         activeSession = { question };
+        activeSessionDeckId = request.deckId;
         return question as unknown as TResponse;
       }
 
@@ -174,12 +233,16 @@ export function createPhaseOneStubRuntime(
         } satisfies AnswerQuestionResponse;
 
         activeSession = { question: undefined };
+        activeSessionDeckId = undefined;
         return response as unknown as TResponse;
       }
 
       if (command === "review.resetProgress") {
         const request = payload as ResetProgressRequest;
         activeSession = { question: undefined };
+        if (request.scope === "all" || request.targetDeckId === activeSessionDeckId) {
+          activeSessionDeckId = undefined;
+        }
         return {
           ok: true,
           scope: request.scope,

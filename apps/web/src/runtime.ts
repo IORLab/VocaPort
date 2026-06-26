@@ -13,6 +13,8 @@ interface WasmWebRuntime {
   listCapabilities(): string[];
   previewApkg(fileName: string, fileBytes: Uint8Array): unknown;
   commitApkg(request: unknown): unknown;
+  listDecks(): unknown;
+  selectDeck(request: unknown): unknown;
   getActiveSession(): unknown;
   startSession(request: unknown): unknown;
   answerQuestion(request: unknown): unknown;
@@ -27,6 +29,7 @@ interface WasmWebRuntimeModule {
 
 const mutatingCommands = new Set([
   "import.commitApkg",
+  "library.selectDeck",
   "quiz.startSession",
   "quiz.answerQuestion",
   "review.resetProgress",
@@ -107,6 +110,10 @@ export function createWebRuntime(
 
       if (command === "import.commitApkg") {
         response = runtime.commitApkg(payload) as TResponse;
+      } else if (command === "library.listDecks") {
+        response = runtime.listDecks() as TResponse;
+      } else if (command === "library.selectDeck") {
+        response = runtime.selectDeck(payload) as TResponse;
       } else if (command === "quiz.getActiveSession") {
         response = runtime.getActiveSession() as TResponse;
       } else if (command === "quiz.startSession") {

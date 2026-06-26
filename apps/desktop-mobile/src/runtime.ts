@@ -4,6 +4,8 @@ const nativeCommandMap = {
   "module.listCapabilities": "list_capabilities",
   "import.previewApkg": "preview_apkg",
   "import.commitApkg": "commit_apkg",
+  "library.listDecks": "list_decks",
+  "library.selectDeck": "select_deck",
   "quiz.getActiveSession": "get_active_session",
   "quiz.startSession": "start_session",
   "quiz.answerQuestion": "answer_question",
@@ -55,6 +57,7 @@ export function createDesktopRuntime() {
 
       if (
         command === "import.commitApkg" ||
+        command === "library.selectDeck" ||
         command === "quiz.startSession" ||
         command === "quiz.answerQuestion" ||
         command === "review.resetProgress"
@@ -64,7 +67,7 @@ export function createDesktopRuntime() {
         });
       }
 
-      if (command === "quiz.getActiveSession") {
+      if (command === "library.listDecks" || command === "quiz.getActiveSession") {
         return invoke<TResponse>(nativeCommandMap[command]);
       }
 

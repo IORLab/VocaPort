@@ -1,7 +1,8 @@
 use core_app_service::{PhaseOneService, PhaseOneServiceError};
 use core_bridge_contract::{
     ActiveSessionResponse, AnswerQuestionRequest, AnswerQuestionResponse, ImportCommitRequest,
-    ImportCommitResponse, ImportPreviewResponse, ResetProgressRequest, StartSessionRequest,
+    ImportCommitResponse, ImportPreviewResponse, ListDecksResponse, ResetProgressRequest,
+    SelectDeckRequest, SelectDeckResponse, StartSessionRequest,
 };
 use js_sys::Uint8Array;
 use serde::{de::DeserializeOwned, Serialize};
@@ -56,6 +57,19 @@ impl PhaseOneWebRuntime {
         let request = deserialize_request::<ImportCommitRequest>(request)?;
         let response = self.service.commit_apkg(request).map_err(js_error)?;
 
+        serialize_response(response)
+    }
+
+    #[wasm_bindgen(js_name = listDecks)]
+    pub fn list_decks(&self) -> Result<JsValue, JsValue> {
+        let response = self.service.list_decks().map_err(js_error)?;
+        serialize_response(response)
+    }
+
+    #[wasm_bindgen(js_name = selectDeck)]
+    pub fn select_deck(&mut self, request: JsValue) -> Result<JsValue, JsValue> {
+        let request = deserialize_request::<SelectDeckRequest>(request)?;
+        let response = self.service.select_deck(request).map_err(js_error)?;
         serialize_response(response)
     }
 
@@ -126,6 +140,8 @@ fn _assert_bridge_types(
         AnswerQuestionResponse,
         ImportCommitResponse,
         ImportPreviewResponse,
+        ListDecksResponse,
+        SelectDeckResponse,
     ),
 ) {
 }

@@ -3,7 +3,8 @@ pub mod storage;
 use core_app_service::PhaseOneService;
 use core_bridge_contract::{
     ActiveSessionResponse, AnswerQuestionRequest, AnswerQuestionResponse, ImportCommitRequest,
-    ImportCommitResponse, ImportPreviewResponse, ResetProgressRequest, StartSessionRequest,
+    ImportCommitResponse, ImportPreviewResponse, ListDecksResponse, ResetProgressRequest,
+    SelectDeckRequest, SelectDeckResponse, StartSessionRequest,
 };
 use std::error::Error;
 use std::sync::Arc;
@@ -61,6 +62,39 @@ fn commit_apkg(
         .lock()
         .map_err(|_| "failed to lock PhaseOneService".to_string())?;
     let response = service.commit_apkg(request).map_err(|error| error.to_string())?;
+    let snapshot_json = service
+        .export_snapshot_json()
+        .map_err(|error| error.to_string())?;
+    drop(service);
+
+    state
+        .store
+        .save_snapshot(&snapshot_json)
+        .map_err(|error| error.to_string())?;
+
+    Ok(response)
+}
+
+#[tauri::command]
+fn list_decks(state: tauri::State<'_, AppState>) -> Result<ListDecksResponse, String> {
+    let service = state
+        .service
+        .lock()
+        .map_err(|_| "failed to lock PhaseOneService".to_string())?;
+
+    service.list_decks().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn select_deck(
+    state: tauri::State<'_, AppState>,
+    request: SelectDeckRequest,
+) -> Result<SelectDeckResponse, String> {
+    let mut service = state
+        .service
+        .lock()
+        .map_err(|_| "failed to lock PhaseOneService".to_string())?;
+    let response = service.select_deck(request).map_err(|error| error.to_string())?;
     let snapshot_json = service
         .export_snapshot_json()
         .map_err(|error| error.to_string())?;
@@ -192,6 +226,8 @@ pub fn run() {
             list_capabilities,
             preview_apkg,
             commit_apkg,
+            list_decks,
+            select_deck,
             get_active_session,
             start_session,
             answer_question,

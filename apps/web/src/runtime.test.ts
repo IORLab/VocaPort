@@ -3,7 +3,9 @@ import type {
   ImportCommitRequest,
   ImportPreviewRequest,
   ImportPreviewResponse,
+  ListDecksResponse,
   QuestionDto,
+  SelectDeckRequest,
   StartSessionRequest,
 } from "@vocaport/bridge-schema";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -89,5 +91,63 @@ describe("web runtime smoke", () => {
     >("quiz.getActiveSession", undefined);
 
     expect(resumed.question).toEqual(firstQuestion);
+  });
+
+  it("restores the current deck selection after recreating the runtime", async () => {
+    const fixtureBytes = await loadBasicApkgFixture();
+    const firstRuntime = createWebRuntime();
+    const preview = await firstRuntime.invoke<
+      ImportPreviewRequest,
+      ImportPreviewResponse
+    >("import.previewApkg", {
+      fileName: "basic-vocab.apkg",
+      fileBytes: fixtureBytes,
+    });
+
+    const commit = await firstRuntime.invoke<ImportCommitRequest, { deckId: string }>(
+      "import.commitApkg",
+      {
+        importId: preview.importId,
+        targetDeckId: preview.resolvedDeckId,
+        commitMode: "upsert_existing_deck",
+        confirmedFieldMapping: {
+          lemmaField: preview.fieldCandidates.lemma?.fieldName ?? "Front",
+          meaningField: preview.fieldCandidates.meaning?.fieldName ?? "Back",
+          exampleField: preview.fieldCandidates.example?.fieldName,
+          imageField: preview.fieldCandidates.image?.fieldName,
+          audioField: preview.fieldCandidates.audio?.fieldName,
+        },
+      },
+    );
+
+    const initialListing = await firstRuntime.invoke<undefined, ListDecksResponse>(
+      "library.listDecks",
+      undefined,
+    );
+
+    expect(initialListing.decks).toHaveLength(1);
+    expect(initialListing.decks[0]).toMatchObject({
+      deckId: commit.deckId,
+      isCurrentDeck: false,
+    });
+
+    await firstRuntime.invoke<SelectDeckRequest, { deckId: string }>(
+      "library.selectDeck",
+      {
+        deckId: commit.deckId,
+      },
+    );
+
+    const secondRuntime = createWebRuntime();
+    const restoredListing = await secondRuntime.invoke<undefined, ListDecksResponse>(
+      "library.listDecks",
+      undefined,
+    );
+
+    expect(restoredListing.decks).toHaveLength(1);
+    expect(restoredListing.decks[0]).toMatchObject({
+      deckId: commit.deckId,
+      isCurrentDeck: true,
+    });
   });
 });
