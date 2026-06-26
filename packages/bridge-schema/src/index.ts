@@ -240,3 +240,33 @@ export interface ResetProgressRequest {
   targetDeckId?: string;
   reason: string;
 }
+
+export type Permission =
+  | "import.apkg.read"
+  | "media.asset.read"
+  | "quiz.generate"
+  | "scheduler.compute"
+  | "storage.module_scoped"
+  | "network.none"
+  | "network.limited"
+  | "ui.route.register";
+
+export type PlatformTarget = "web" | "desktop" | "android";
+
+export interface SignatureEnvelope {
+  algorithm: string;
+  keyId: string;
+  signature: string;
+}
+
+export interface ModuleManifest {
+  moduleId: string;
+  version: string;
+  apiVersion: string;
+  capabilities: string[];
+  permissions: Permission[];
+  platformTargets: PlatformTarget[];
+  entrypoint: string;
+  checksum: string;
+  signature: SignatureEnvelope;
+}
