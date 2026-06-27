@@ -1,112 +1,85 @@
 export type Locale = "en" | "zh";
 
 export interface DownloadsCopy {
-  archiveDescription: string;
-  archiveKicker: string;
-  emptyDescription: string;
-  emptyTitle: string;
-  errorDescription: string;
+  downloadAction: string;
+  downloadsTab: string;
+  emptyPrereleaseSection: string;
+  emptyReleaseSection: string;
+  errorBody: string;
   errorTitle: string;
-  featuredDownloadsAriaLabel: string;
-  footerGeneratedPrefix: string;
-  footerUpdatedPrefix: string;
+  footerLabel: string;
   githubReleasesButton: string;
-  heroDescription: string;
   heroEyebrow: string;
+  heroSubtitle: string;
   heroTitle: string;
   languageSwitcherLabel: string;
-  latestPrerelease: string;
-  latestStable: string;
-  loadingDescription: string;
-  loadingTitle: string;
-  moreDownloads: string;
-  noOlderPackages: string;
-  previewDescription: string;
-  previewSectionLabel: string;
-  prereleaseBadge: string;
-  releaseBadge: string;
-  releaseNotesButton: string;
+  loading: string;
+  openRelease: string;
+  prereleaseSectionDescription: string;
+  prereleaseSectionTitle: string;
+  publishedAtLabel: string;
   releaseNotesEmpty: string;
-  stableDescription: string;
-  stableSectionLabel: string;
+  releaseNotesTab: string;
+  releaseSectionDescription: string;
+  releaseSectionTitle: string;
   themeToggleToDark: string;
   themeToggleToLight: string;
-  viewOnGitHub: string;
+  unknownPublishedAt: string;
 }
 
 const copyByLocale: Record<Locale, DownloadsCopy> = {
   en: {
-    archiveDescription:
-      "Browse older stable releases and prerelease builds. Expand the release notes before installing if you want a quick change summary.",
-    archiveKicker: "Archive",
-    emptyDescription:
-      "Public GitHub installers have not been published yet. This page will update itself once release assets are attached.",
-    emptyTitle: "No public installers yet.",
-    errorDescription: "Release data is temporarily unavailable.",
-    errorTitle: "Could not load the installer catalog.",
-    featuredDownloadsAriaLabel: "Featured downloads",
-    footerGeneratedPrefix: "Source",
-    footerUpdatedPrefix: "Last synced",
+    downloadAction: "Download",
+    downloadsTab: "Downloads",
+    emptyPrereleaseSection: "No prerelease builds are available right now.",
+    emptyReleaseSection: "No stable builds are available right now.",
+    errorBody: "Refresh later or open GitHub Releases directly.",
+    errorTitle: "Failed to load release data",
+    footerLabel: "Last synced",
     githubReleasesButton: "Open GitHub Releases",
-    heroDescription:
-      "Install the latest stable build, test the newest preview, or roll back to an older package without digging through release history by hand.",
     heroEyebrow: "VocaPort Download Desk",
-    heroTitle: "Official build manifest",
-    languageSwitcherLabel: "Language",
-    latestPrerelease: "Latest prerelease",
-    latestStable: "Latest stable release",
-    loadingDescription:
-      "The page is syncing the current public release list from GitHub.",
-    loadingTitle: "Syncing public installers…",
-    moreDownloads: "Archive",
-    noOlderPackages: "No older public packages are available yet.",
-    previewDescription: "Test upcoming changes and early-access installers.",
-    previewSectionLabel: "Preview",
-    prereleaseBadge: "Prerelease",
-    releaseBadge: "Release",
-    releaseNotesButton: "Release notes",
-    releaseNotesEmpty: "No release notes were published for this build.",
-    stableDescription: "Recommended for most users and everyday installs.",
-    stableSectionLabel: "Stable",
+    heroSubtitle:
+      "Browse stable and prerelease builds in one place and jump straight to the official GitHub installers.",
+    heroTitle: "Build Ledger",
+    languageSwitcherLabel: "Language switch",
+    loading: "Loading release data...",
+    openRelease: "Open Release Page",
+    prereleaseSectionDescription: "Preview builds for testing and early access.",
+    prereleaseSectionTitle: "Prerelease",
+    publishedAtLabel: "Published",
+    releaseNotesEmpty: "This release does not include notes yet.",
+    releaseNotesTab: "Release Notes",
+    releaseSectionDescription: "Stable public builds.",
+    releaseSectionTitle: "Release",
     themeToggleToDark: "Switch to dark mode",
     themeToggleToLight: "Switch to light mode",
-    viewOnGitHub: "View on GitHub",
+    unknownPublishedAt: "Unknown",
   },
   zh: {
-    archiveDescription:
-      "浏览更早的稳定版和预发布包，需要回退或核对旧版本时可直接从这里进入。",
-    archiveKicker: "历史构建",
-    emptyDescription:
-      "GitHub Releases 暂时还没有公开安装包。只要 release 附上资产，这个页面就会自动更新。",
-    emptyTitle: "暂时还没有公开安装包。",
-    errorDescription: "当前暂时无法加载 release 数据。",
-    errorTitle: "暂时无法加载安装包目录。",
-    featuredDownloadsAriaLabel: "精选下载",
-    footerGeneratedPrefix: "来源",
-    footerUpdatedPrefix: "最后同步",
-    githubReleasesButton: "打开 GitHub Releases",
-    heroDescription:
-      "直接安装最新稳定版、试用最新预发布版，或回退到旧版本，不用再手动翻 release 历史。",
-    heroEyebrow: "VocaPort 下载总览",
-    heroTitle: "官方安装包总览",
+    downloadAction: "下载",
+    downloadsTab: "下载列表",
+    emptyPrereleaseSection: "暂时没有可用的预发布版本。",
+    emptyReleaseSection: "暂时没有可用的正式版本。",
+    errorBody: "请稍后刷新，或直接前往 GitHub Releases 查看下载。",
+    errorTitle: "版本数据加载失败",
+    footerLabel: "最后同步",
+    githubReleasesButton: "查看 GitHub Releases",
+    heroEyebrow: "VocaPort 下载站",
+    heroSubtitle: "统一查看正式版和预发布版，直接跳转到 GitHub 官方安装包。",
+    heroTitle: "构建账本",
     languageSwitcherLabel: "语言切换",
-    latestPrerelease: "最新预发布版",
-    latestStable: "最新稳定版",
-    loadingDescription: "页面正在同步 GitHub 上当前公开的安装包列表。",
-    loadingTitle: "正在同步公开安装包……",
-    moreDownloads: "版本归档",
-    noOlderPackages: "暂时还没有更早的公开安装包。",
-    previewDescription: "适合测试新改动，或提前验证即将发布的安装包。",
-    previewSectionLabel: "预发布版",
-    prereleaseBadge: "预发布",
-    releaseBadge: "正式版",
-    releaseNotesButton: "发行说明",
-    releaseNotesEmpty: "这个版本还没有发布说明。",
-    stableDescription: "推荐大多数用户直接安装，适合日常使用。",
-    stableSectionLabel: "稳定版",
+    loading: "正在读取版本数据...",
+    openRelease: "打开 Release 页面",
+    prereleaseSectionDescription: "用于测试与提前体验的新构建。",
+    prereleaseSectionTitle: "预发布",
+    publishedAtLabel: "发布时间",
+    releaseNotesEmpty: "这个版本暂时没有发布说明。",
+    releaseNotesTab: "发布说明",
+    releaseSectionDescription: "稳定可用的公开版本。",
+    releaseSectionTitle: "正式版",
     themeToggleToDark: "切换到暗色模式",
     themeToggleToLight: "切换到浅色模式",
-    viewOnGitHub: "在 GitHub 查看",
+    unknownPublishedAt: "时间未知",
   },
 };
 

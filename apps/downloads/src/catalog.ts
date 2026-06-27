@@ -2,9 +2,8 @@ import type { Locale } from "./i18n";
 import type { ReleaseAsset, ReleaseCatalog, ReleaseRecord } from "./types";
 
 export interface ReleaseSections {
-  latestStable?: ReleaseRecord;
-  latestPrerelease?: ReleaseRecord;
-  previousReleases: ReleaseRecord[];
+  prerelease: ReleaseRecord[];
+  release: ReleaseRecord[];
 }
 
 export function loadReleaseCatalog(url: string) {
@@ -22,17 +21,9 @@ export function selectReleaseSections(catalog: ReleaseCatalog): ReleaseSections 
     .filter((release) => release.assets.length > 0)
     .sort(sortByPublishedAtDesc);
 
-  const latestStable = releases.find((release) => !release.isPrerelease);
-  const latestPrerelease = releases.find((release) => release.isPrerelease);
-
   return {
-    latestStable,
-    latestPrerelease,
-    previousReleases: releases.filter(
-      (release) =>
-        release.id !== latestStable?.id &&
-        release.id !== latestPrerelease?.id,
-    ),
+    prerelease: releases.filter((release) => release.isPrerelease),
+    release: releases.filter((release) => !release.isPrerelease),
   };
 }
 
@@ -127,27 +118,100 @@ export function inferAssetLabel(asset: ReleaseAsset, locale: Locale) {
   return locale === "zh" ? `下载 ${asset.name}` : `Download ${asset.name}`;
 }
 
-export function formatReleaseDate(value: string, locale: Locale) {
-  return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+export function inferAssetPlatformLabel(asset: ReleaseAsset, locale: Locale) {
+  const normalizedName = asset.name.toLowerCase();
+  const architectureLabel = inferAssetArchitectureLabel(normalizedName, locale);
+  const parts: string[] = [];
+
+  if (
+    normalizedName.endsWith(".apk") ||
+    asset.contentType === "application/vnd.android.package-archive"
+  ) {
+    parts.push("Android");
+  } else if (normalizedName.endsWith(".dmg") || normalizedName.endsWith(".pkg")) {
+    parts.push("macOS");
+  } else if (normalizedName.endsWith(".msi") || normalizedName.endsWith(".exe")) {
+    parts.push("Windows");
+  } else if (
+    normalizedName.endsWith(".appimage") ||
+    normalizedName.endsWith(".deb") ||
+    normalizedName.endsWith(".rpm")
+  ) {
+    parts.push("Linux");
+  } else {
+    return locale === "zh" ? "安装包" : "Package";
+  }
+
+  if (architectureLabel) {
+    parts.push(architectureLabel);
+  }
+
+  if (
+    normalizedName.includes("beta") &&
+    (normalizedName.endsWith(".apk") ||
+      asset.contentType === "application/vnd.android.package-archive")
+  ) {
+    parts.push("Beta");
+  }
+
+  return parts.join(" ");
 }
 
-export function formatBytes(value: number) {
-  if (value >= 1_000_000_000) {
-    return `${(value / 1_000_000_000).toFixed(1)} GB`;
+export function formatPublishedAt(
+  value: string,
+  locale: Locale,
+  fallback: string,
+) {
+  if (!value) {
+    return fallback;
   }
 
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)} MB`;
+  try {
+    return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+export function formatGeneratedAt(value: string, locale: Locale) {
+  if (!value) {
+    return "";
   }
 
-  if (value >= 1_000) {
-    return `${(value / 1_000).toFixed(1)} KB`;
+  try {
+    return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+export function formatBytes(value: number, locale: Locale) {
+  if (!value || !Number.isFinite(value)) {
+    return "";
   }
 
-  return `${value} B`;
+  const units = ["B", "KB", "MB", "GB"];
+  let size = value;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${new Intl.NumberFormat(locale === "zh" ? "zh-CN" : "en-US", {
+    maximumFractionDigits: size >= 10 ? 0 : 1,
+  }).format(size)} ${units[unitIndex]}`;
 }
 
 function sortByPublishedAtDesc(left: ReleaseRecord, right: ReleaseRecord) {

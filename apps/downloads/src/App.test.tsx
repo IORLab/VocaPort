@@ -5,7 +5,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DownloadsExperience, DownloadsPage } from "./App";
 import { sampleCatalog } from "./fixtures";
-import { getCopy } from "./i18n";
 import { THEME_STORAGE_KEY } from "./theme";
 
 function mockMatchMedia(matches: boolean) {
@@ -22,6 +21,7 @@ function mockMatchMedia(matches: boolean) {
 beforeEach(() => {
   window.localStorage.clear();
   document.documentElement.removeAttribute("data-theme");
+  document.documentElement.removeAttribute("lang");
   mockMatchMedia(false);
 });
 
@@ -31,15 +31,17 @@ afterEach(() => {
 });
 
 describe("downloads page", () => {
-  it("reuses the refreshed shell for loading, error, and empty states", () => {
+  it("reuses the LunaTV-style shell for loading, error, and empty states", () => {
     const { rerender } = render(
       <DownloadsExperience state={{ status: "loading" }} />,
     );
 
     expect(
-      screen.getByRole("heading", { name: "Official build manifest" }),
+      screen.getByRole("heading", { name: "Build Ledger" }),
     ).toBeTruthy();
-    expect(screen.getByText("Syncing public installers…")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Release" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Prerelease" })).toBeTruthy();
+    expect(screen.getByText("Loading release data...")).toBeTruthy();
     expect(
       screen.getByRole("link", { name: "Open GitHub Releases" }),
     ).toBeTruthy();
@@ -50,10 +52,10 @@ describe("downloads page", () => {
       />,
     );
 
+    expect(screen.getByText("Failed to load release data")).toBeTruthy();
     expect(
-      screen.getByText("Release data is temporarily unavailable."),
+      screen.getByText("Refresh later or open GitHub Releases directly."),
     ).toBeTruthy();
-    expect(screen.getByText("Failed to load release catalog: 500")).toBeTruthy();
 
     rerender(
       <DownloadsExperience
@@ -69,188 +71,138 @@ describe("downloads page", () => {
       />,
     );
 
-    expect(screen.getByText("No public installers yet.")).toBeTruthy();
+    expect(
+      screen.getByText("No stable builds are available right now."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("No prerelease builds are available right now."),
+    ).toBeTruthy();
   });
 
-  it("renders the stable, preview, and archive sections in the refreshed layout", () => {
+  it("renders release and prerelease lists without the old archive section", async () => {
+    const user = userEvent.setup();
+
     render(<DownloadsPage catalog={sampleCatalog} />);
 
-    expect(screen.getByText("01")).toBeTruthy();
-    const latestStableSection = screen
-      .getByRole("heading", { name: "Stable" })
+    const releaseSection = screen
+      .getByRole("heading", { name: "Release" })
+      .closest("section");
+    const prereleaseSection = screen
+      .getByRole("heading", { name: "Prerelease" })
       .closest("section");
 
-    expect(latestStableSection).toBeTruthy();
+    expect(releaseSection).toBeTruthy();
+    expect(prereleaseSection).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Archive" })).toBeNull();
+
     expect(
-      within(latestStableSection as HTMLElement)
-        .getByRole("link", {
-          name: /Download Android Universal Beta APK/,
-        })
+      within(releaseSection as HTMLElement).getByText("VocaPort v1.0.1"),
+    ).toBeTruthy();
+    expect(
+      within(releaseSection as HTMLElement).getByText("VocaPort v1.0.0"),
+    ).toBeTruthy();
+    expect(
+      within(prereleaseSection as HTMLElement).getByText("VocaPort v1.1.0-beta.1"),
+    ).toBeTruthy();
+
+    await user.click(
+      within(releaseSection as HTMLElement).getByText("VocaPort v1.0.1"),
+    );
+
+    const stableCard = within(releaseSection as HTMLElement)
+      .getByText("VocaPort v1.0.1")
+      .closest("details");
+
+    expect(stableCard?.hasAttribute("open")).toBe(true);
+    expect(
+      within(stableCard as HTMLElement)
+        .getByRole("link", { name: "Open Release Page" })
+        .getAttribute("href"),
+    ).toBe("https://example.com/releases/v1.0.1");
+    expect(
+      within(stableCard as HTMLElement).getByText(
+        "vocaport-v1.0.1-android-universal-beta.apk",
+      ),
+    ).toBeTruthy();
+    expect(
+      within(stableCard as HTMLElement)
+        .getAllByRole("link", { name: "Download" })[0]
         .getAttribute("href"),
     ).toBe(
       "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-android-universal-beta.apk",
     );
-    expect(
-      within(latestStableSection as HTMLElement)
-        .getByRole("link", {
-          name: "Download macOS Intel DMG",
-        })
-        .getAttribute("href"),
-    ).toBe(
-      "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-macos-intel.dmg",
-    );
-    expect(
-      within(latestStableSection as HTMLElement)
-        .getByRole("link", {
-          name: "Download macOS arm64 DMG",
-        })
-        .getAttribute("href"),
-    ).toBe(
-      "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-macos-arm64.dmg",
-    );
-    expect(
-      within(latestStableSection as HTMLElement)
-        .getByRole("link", {
-          name: "Download Windows x64 MSI",
-        })
-        .getAttribute("href"),
-    ).toBe(
-      "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-windows-x64.msi",
-    );
-    expect(
-      within(latestStableSection as HTMLElement)
-        .getByRole("link", {
-          name: "Download Linux x64 AppImage",
-        })
-        .getAttribute("href"),
-    ).toBe(
-      "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-linux-x64.AppImage",
-    );
-    expect(
-      within(latestStableSection as HTMLElement)
-        .getByRole("link", {
-          name: "Download Linux x64 DEB",
-        })
-        .getAttribute("href"),
-    ).toBe(
-      "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-linux-x64.deb",
-    );
+  });
 
-    expect(screen.getByText("02")).toBeTruthy();
-    const latestPrereleaseSection = screen
-      .getByRole("heading", { name: "Preview" })
+  it("switches release card tabs and localizes release notes", async () => {
+    const user = userEvent.setup();
+
+    render(<DownloadsPage catalog={sampleCatalog} />);
+
+    const prereleaseSection = screen
+      .getByRole("heading", { name: "Prerelease" })
       .closest("section");
 
-    expect(latestPrereleaseSection).toBeTruthy();
-    expect(
-      within(latestPrereleaseSection as HTMLElement).getByText(
-        "v1.1.0-beta.1",
+    expect(prereleaseSection).toBeTruthy();
+
+    await user.click(
+      within(prereleaseSection as HTMLElement).getByText(
+        "VocaPort v1.1.0-beta.1",
       ),
-    ).toBeTruthy();
-    expect(
-      within(latestPrereleaseSection as HTMLElement)
-        .getByRole("link", {
-          name: "Download macOS Intel DMG",
-        })
-        .getAttribute("href"),
-    ).toBe(
-      "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-macos-intel.dmg",
-    );
-    expect(
-      within(latestPrereleaseSection as HTMLElement)
-        .getByRole("link", {
-          name: "Download macOS arm64 DMG",
-        })
-        .getAttribute("href"),
-    ).toBe(
-      "https://example.com/downloads/v1.1.0-beta.1/vocaport-v1.1.0-beta.1-macos-arm64.dmg",
     );
 
-    const moreDownloadsSection = screen
-      .getByRole("heading", { name: "Archive" })
-      .closest("section");
+    const prereleaseCard = within(prereleaseSection as HTMLElement)
+      .getByText("VocaPort v1.1.0-beta.1")
+      .closest("details");
 
-    expect(moreDownloadsSection).toBeTruthy();
-    expect(
-      within(moreDownloadsSection as HTMLElement).getByRole("heading", {
-        name: "VocaPort v1.0.0",
-      }),
-    ).toBeTruthy();
-    expect(
-      within(moreDownloadsSection as HTMLElement)
-        .getByRole("link", {
-          name: "View on GitHub",
-        })
-        .getAttribute("href"),
-    ).toBe("https://example.com/releases/v1.0.0");
-  });
-
-  it("toggles the theme and persists the manual choice", async () => {
-    const user = userEvent.setup();
-
-    render(<DownloadsPage catalog={sampleCatalog} />);
-
-    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(prereleaseCard?.hasAttribute("open")).toBe(true);
 
     await user.click(
-      screen.getByRole("button", { name: "Switch to dark mode" }),
-    );
-
-    expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
-  });
-
-  it("shows a friendly empty state when no release assets exist yet", () => {
-    render(
-      <DownloadsPage
-        catalog={{
-          owner: "IORLab",
-          repo: "VocaPort",
-          generatedAt: "2026-06-26T10:00:00.000Z",
-          releases: [],
-        }}
-      />,
-    );
-
-    expect(screen.getByText(getCopy("en").emptyTitle)).toBeTruthy();
-  });
-
-  it("switches language and expands localized release notes inline", async () => {
-    const user = userEvent.setup();
-
-    render(<DownloadsPage catalog={sampleCatalog} />);
-
-    expect(
-      screen.getByRole("heading", { name: getCopy("en").heroTitle }),
-    ).toBeTruthy();
-
-    const latestPrereleaseSection = screen
-      .getByRole("heading", { name: "Preview" })
-      .closest("section");
-
-    expect(latestPrereleaseSection).toBeTruthy();
-
-    await user.click(
-      within(latestPrereleaseSection as HTMLElement).getByRole("button", {
-        name: "Release notes",
+      within(prereleaseCard as HTMLElement).getByRole("tab", {
+        name: "Release Notes",
       }),
     );
 
-    expect(screen.getByText("Included in this release")).toBeTruthy();
     expect(
-      screen.getByText(
+      within(prereleaseCard as HTMLElement).getByText("Included in this release"),
+    ).toBeTruthy();
+    expect(
+      within(prereleaseCard as HTMLElement).getByText(
         "The Web / Desktop / Android shells are now publicly available.",
       ),
     ).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "中文" }));
 
+    expect(screen.getByRole("heading", { name: "构建账本" })).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: getCopy("zh").heroTitle }),
+      screen.getByRole("link", { name: "查看 GitHub Releases" }),
     ).toBeTruthy();
-    expect(screen.getByText("本次包含")).toBeTruthy();
     expect(
-      screen.getByText("Web / Desktop / Android 壳层已公开可用。"),
+      within(prereleaseCard as HTMLElement).getByText("本次包含"),
     ).toBeTruthy();
+    expect(
+      within(prereleaseCard as HTMLElement).getByText(
+        "Web / Desktop / Android 壳层已公开可用。",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("uses an icon-only theme button and persists the manual choice", async () => {
+    const user = userEvent.setup();
+
+    render(<DownloadsPage catalog={sampleCatalog} />);
+
+    const toggleButton = screen.getByRole("button", {
+      name: "Switch to dark mode",
+    });
+
+    expect(toggleButton.textContent?.trim()).toBe("");
+    expect(toggleButton.querySelector("svg")).toBeTruthy();
+    expect(document.documentElement.dataset.theme).toBe("light");
+
+    await user.click(toggleButton);
+
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
   });
 });

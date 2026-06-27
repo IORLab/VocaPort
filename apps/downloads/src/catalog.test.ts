@@ -27,13 +27,15 @@ describe("release catalog", () => {
     ]);
   });
 
-  it("highlights latest stable and prerelease while keeping older versions in the archive list", () => {
+  it("splits public releases into release and prerelease sections", () => {
     const sections = selectReleaseSections(sampleCatalog);
 
-    expect(sections.latestStable?.tagName).toBe("v1.0.1");
-    expect(sections.latestPrerelease?.tagName).toBe("v1.1.0-beta.1");
-    expect(sections.previousReleases.map((release) => release.tagName)).toEqual([
+    expect(sections.release.map((release) => release.tagName)).toEqual([
+      "v1.0.1",
       "v1.0.0",
+    ]);
+    expect(sections.prerelease.map((release) => release.tagName)).toEqual([
+      "v1.1.0-beta.1",
     ]);
   });
 
