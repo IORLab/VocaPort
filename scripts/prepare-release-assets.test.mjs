@@ -129,6 +129,59 @@ describe("prepare-release-assets", () => {
       ),
     ).toBe("android apk");
   });
+
+  it("prefers the signed Android universal APK when unsigned output also exists", async () => {
+    const workspace = await createTempWorkspace();
+    const searchRoot = join(workspace, "input");
+    const outputDir = join(workspace, "output");
+
+    await writeFixture(
+      join(
+        searchRoot,
+        "app",
+        "build",
+        "outputs",
+        "apk",
+        "universal",
+        "release",
+        "app-universal-release-unsigned.apk",
+      ),
+      "unsigned android apk",
+    );
+    await writeFixture(
+      join(
+        searchRoot,
+        "app",
+        "build",
+        "outputs",
+        "apk",
+        "universal",
+        "release",
+        "app-universal-release.apk",
+      ),
+      "signed android apk",
+    );
+
+    await runPrepareReleaseAssets([
+      "--profile",
+      "android",
+      "--architecture",
+      "universal",
+      "--release-tag",
+      "v1.2.3",
+      "--search-root",
+      searchRoot,
+      "--output-dir",
+      outputDir,
+    ]);
+
+    expect(
+      await readFile(
+        join(outputDir, "vocaport-v1.2.3-android-universal-beta.apk"),
+        "utf8",
+      ),
+    ).toBe("signed android apk");
+  });
 });
 
 async function createTempWorkspace() {

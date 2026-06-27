@@ -5,7 +5,7 @@ const profiles = {
   android: [
     {
       id: "android-apk",
-      matcher: /app-universal-release.*\.apk$/i,
+      matcher: /app-universal-release\.apk$/i,
       outputName: ({ releaseTag, architecture }) =>
         `vocaport-${releaseTag}-android-${architecture}-beta.apk`,
     },

@@ -86,6 +86,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate Android signing secrets
+        env:
+          ANDROID_RELEASE_KEYSTORE_B64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_B64 }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+        run: |
+          required_vars=(
+            ANDROID_RELEASE_KEYSTORE_B64
+            ANDROID_RELEASE_KEY_ALIAS
+            ANDROID_RELEASE_KEYSTORE_PASSWORD
+            ANDROID_RELEASE_KEY_PASSWORD
+          )
+
+          for var_name in "${required_vars[@]}"; do
+            if [ -z "${!var_name}" ]; then
+              echo "Missing required Android signing secret: $var_name" >&2
+              exit 1
+            fi
+          done
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -141,6 +162,44 @@ jobs:
 
       - name: Build universal Android beta APK
         run: pnpm --filter @vocaport/desktop-mobile exec tauri android build --apk
+
+      - name: Sign Android release APK
+        env:
+          ANDROID_RELEASE_KEYSTORE_B64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_B64 }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          ANDROID_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+        run: |
+          unsigned_apk="apps/desktop-mobile/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk"
+          signed_apk="apps/desktop-mobile/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk"
+          signing_dir="$RUNNER_TEMP/android-signing"
+          keystore_path="$signing_dir/release.keystore"
+          build_tools_dir="$ANDROID_HOME/build-tools/35.0.1"
+          apksigner_path="$build_tools_dir/apksigner"
+
+          if [ ! -f "$unsigned_apk" ]; then
+            echo "Missing unsigned Android release APK: $unsigned_apk" >&2
+            exit 1
+          fi
+
+          if [ ! -x "$apksigner_path" ]; then
+            echo "Missing apksigner at $apksigner_path" >&2
+            exit 1
+          fi
+
+          mkdir -p "$signing_dir"
+          printf '%s' "$ANDROID_RELEASE_KEYSTORE_B64" | openssl base64 -d -A > "$keystore_path"
+          chmod 600 "$keystore_path"
+
+          "$apksigner_path" sign \
+            --ks "$keystore_path" \
+            --ks-key-alias "$ANDROID_RELEASE_KEY_ALIAS" \
+            --ks-pass "pass:$ANDROID_RELEASE_KEYSTORE_PASSWORD" \
+            --key-pass "pass:$ANDROID_RELEASE_KEY_PASSWORD" \
+            --out "$signed_apk" \
+            "$unsigned_apk"
+
+          "$apksigner_path" verify --verbose "$signed_apk"
 
       - name: Prepare Android release asset
         env:
