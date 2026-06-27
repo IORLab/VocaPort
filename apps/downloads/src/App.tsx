@@ -10,7 +10,12 @@ import {
   getLocalizedReleaseNotes,
   type Locale,
 } from "./i18n";
-import { getInitialTheme, type Theme } from "./theme";
+import {
+  getInitialTheme,
+  persistTheme,
+  toggleTheme,
+  type Theme,
+} from "./theme";
 import type { ReleaseCatalog, ReleaseRecord } from "./types";
 
 interface DownloadsPageProps {
@@ -47,7 +52,7 @@ export function DownloadsExperience({
   state: DownloadsViewState;
 }) {
   const [locale, setLocale] = useState<Locale>("en");
-  const [theme] = useState<Theme>(() =>
+  const [theme, setTheme] = useState<Theme>(() =>
     getInitialTheme(getBrowserThemeDependencies()),
   );
   const copy = getCopy(locale);
@@ -66,6 +71,17 @@ export function DownloadsExperience({
       ? { owner: state.catalog.owner, repo: state.catalog.repo }
       : FALLBACK_REPOSITORY;
   const githubReleasesUrl = `https://github.com/${repository.owner}/${repository.repo}/releases`;
+  const handleThemeToggle = () => {
+    setTheme((currentTheme) => {
+      const nextTheme = toggleTheme(currentTheme);
+
+      if (typeof window !== "undefined") {
+        persistTheme(nextTheme, window.localStorage);
+      }
+
+      return nextTheme;
+    });
+  };
 
   return (
     <PageFrame>
@@ -73,6 +89,8 @@ export function DownloadsExperience({
         githubReleasesUrl={githubReleasesUrl}
         locale={locale}
         onLocaleChange={setLocale}
+        onThemeToggle={handleThemeToggle}
+        theme={theme}
       />
       <PageBody locale={locale} state={state} />
       {state.status === "ready" ? (
@@ -139,53 +157,12 @@ function PageBody({
   }
 
   return (
-    <>
-      <section
-        className="downloads-grid"
-        aria-label={copy.featuredDownloadsAriaLabel}
-      >
-        {latestStable ? (
-          <ReleaseCard
-            heading={copy.latestStable}
-            locale={locale}
-            release={latestStable}
-            tone="stable"
-          />
-        ) : null}
-        {latestPrerelease ? (
-          <ReleaseCard
-            heading={copy.latestPrerelease}
-            locale={locale}
-            release={latestPrerelease}
-            tone="preview"
-          />
-        ) : null}
-      </section>
-
-      <section className="history-section">
-        <div className="section-heading">
-          <p className="section-kicker">{copy.archiveKicker}</p>
-          <h2>{copy.moreDownloads}</h2>
-          <p>{copy.archiveDescription}</p>
-        </div>
-
-        {previousReleases.length === 0 ? (
-          <p className="section-note">{copy.noOlderPackages}</p>
-        ) : (
-          <div className="history-grid">
-            {previousReleases.map((release) => (
-              <ReleaseCard
-                key={release.id}
-                heading={release.tagName}
-                locale={locale}
-                release={release}
-                tone={release.isPrerelease ? "preview" : "archive"}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-    </>
+    <FilledState
+      latestPrerelease={latestPrerelease}
+      latestStable={latestStable}
+      locale={locale}
+      previousReleases={previousReleases}
+    />
   );
 }
 
@@ -193,30 +170,47 @@ function Hero({
   githubReleasesUrl,
   locale,
   onLocaleChange,
+  onThemeToggle,
+  theme,
 }: {
   githubReleasesUrl: string;
   locale: Locale;
   onLocaleChange: (locale: Locale) => void;
+  onThemeToggle: () => void;
+  theme: Theme;
 }) {
   const copy = getCopy(locale);
 
   return (
     <header className="hero">
-      <div className="hero__topbar">
+      <div className="hero__content">
         <p className="hero-kicker">{copy.heroEyebrow}</p>
-        <div
-          className="locale-switcher"
-          aria-label={copy.languageSwitcherLabel}
-          role="group"
-        >
+        <h1>{copy.heroTitle}</h1>
+        <p className="hero-copy">{copy.heroDescription}</p>
+      </div>
+
+      <div className="hero__actions">
+        <div className="hero__action-row">
           <a
-            className="release-notes-link"
+            className="hero-action hero-action--link"
             href={githubReleasesUrl}
             rel="noreferrer"
             target="_blank"
           >
             {copy.githubReleasesButton}
           </a>
+          <ThemeToggle
+            locale={locale}
+            onToggle={onThemeToggle}
+            theme={theme}
+          />
+        </div>
+
+        <div
+          className="locale-switcher"
+          aria-label={copy.languageSwitcherLabel}
+          role="group"
+        >
           <button
             aria-pressed={locale === "zh"}
             className={`locale-switcher__button${locale === "zh" ? " locale-switcher__button--active" : ""}`}
@@ -235,9 +229,32 @@ function Hero({
           </button>
         </div>
       </div>
-      <h1>{copy.heroTitle}</h1>
-      <p className="hero-copy">{copy.heroDescription}</p>
     </header>
+  );
+}
+
+function ThemeToggle({
+  locale,
+  onToggle,
+  theme,
+}: {
+  locale: Locale;
+  onToggle: () => void;
+  theme: Theme;
+}) {
+  const copy = getCopy(locale);
+  const actionLabel =
+    theme === "dark" ? copy.themeToggleToLight : copy.themeToggleToDark;
+
+  return (
+    <button
+      aria-label={actionLabel}
+      className="hero-action theme-toggle"
+      onClick={onToggle}
+      type="button"
+    >
+      {actionLabel}
+    </button>
   );
 }
 
@@ -252,23 +269,74 @@ function StatePanel({
 }) {
   return (
     <section className="status-screen state-panel">
+      <p className="section-kicker">State</p>
       <h2>{title}</h2>
       <p>{description}</p>
-      {detail ? <p>{detail}</p> : null}
+      {detail ? <p className="state-panel__detail">{detail}</p> : null}
     </section>
   );
 }
 
-function ReleaseCard({
-  heading,
+function FilledState({
+  latestPrerelease,
+  latestStable,
+  locale,
+  previousReleases,
+}: {
+  latestPrerelease?: ReleaseRecord;
+  latestStable?: ReleaseRecord;
+  locale: Locale;
+  previousReleases: ReleaseRecord[];
+}) {
+  const copy = getCopy(locale);
+
+  return (
+    <>
+      <section
+        className="spotlight-grid"
+        aria-label={copy.featuredDownloadsAriaLabel}
+      >
+        {latestStable ? (
+          <ReleaseSpotlightCard
+            description={copy.stableDescription}
+            locale={locale}
+            release={latestStable}
+            sectionLabel={copy.stableSectionLabel}
+            sectionNumber="01"
+            tone="stable"
+          />
+        ) : null}
+        {latestPrerelease ? (
+          <ReleaseSpotlightCard
+            description={copy.previewDescription}
+            locale={locale}
+            release={latestPrerelease}
+            sectionLabel={copy.previewSectionLabel}
+            sectionNumber="02"
+            tone="preview"
+          />
+        ) : null}
+      </section>
+
+      <ArchiveReleaseList locale={locale} releases={previousReleases} />
+    </>
+  );
+}
+
+function ReleaseSpotlightCard({
+  description,
   locale,
   release,
+  sectionLabel,
+  sectionNumber,
   tone,
 }: {
-  heading: string;
+  description: string;
   locale: Locale;
   release: ReleaseRecord;
-  tone: "stable" | "preview" | "archive";
+  sectionLabel: string;
+  sectionNumber: string;
+  tone: "stable" | "preview";
 }) {
   const [isReleaseNotesOpen, setIsReleaseNotesOpen] = useState(false);
   const copy = getCopy(locale);
@@ -278,15 +346,22 @@ function ReleaseCard({
   );
 
   return (
-    <section className={`release-card release-card--${tone}`}>
-      <div className="release-card__header">
-        <div>
-          <p className="release-card__eyebrow">{heading}</p>
-          <h2>{release.name}</h2>
+    <section className={`spotlight-card spotlight-card--${tone}`}>
+      <div className="spotlight-card__header">
+        <div className="spotlight-card__section">
+          <span className="spotlight-card__number">{sectionNumber}</span>
+          <div className="spotlight-card__heading-group">
+            <h2>{sectionLabel}</h2>
+            <p className="spotlight-card__description">{description}</p>
+          </div>
         </div>
         <span className={`release-badge release-badge--${tone}`}>
           {release.isPrerelease ? copy.prereleaseBadge : copy.releaseBadge}
         </span>
+      </div>
+
+      <div className="spotlight-card__release">
+        <h3 className="spotlight-card__release-name">{release.name}</h3>
       </div>
 
       <p className="release-card__meta">
@@ -294,47 +369,13 @@ function ReleaseCard({
         <span>{formatReleaseDate(release.publishedAt, locale)}</span>
       </p>
 
-      <div className="asset-list">
-        {release.assets.map((asset) => {
-          const assetLabel = inferAssetLabel(asset, locale);
-
-          return (
-            <a
-              key={asset.id}
-              aria-label={assetLabel}
-              className="asset-link"
-              href={asset.downloadUrl}
-              rel="noreferrer"
-              target="_blank"
-            >
-              <span>{assetLabel}</span>
-              <span className="asset-link__meta">
-                {formatBytes(asset.sizeBytes)} · {asset.downloadCount}
-                {locale === "zh" ? " 次下载" : " downloads"}
-              </span>
-            </a>
-          );
-        })}
-      </div>
-
-      <div className="release-card__footer">
-        <button
-          aria-expanded={isReleaseNotesOpen}
-          className="release-notes-button"
-          onClick={() => setIsReleaseNotesOpen((value) => !value)}
-          type="button"
-        >
-          {copy.releaseNotesButton}
-        </button>
-        <a
-          className="release-notes-link"
-          href={release.htmlUrl}
-          rel="noreferrer"
-          target="_blank"
-        >
-          {copy.viewOnGitHub}
-        </a>
-      </div>
+      <ReleaseAssetList locale={locale} release={release} />
+      <ReleaseCardActions
+        isReleaseNotesOpen={isReleaseNotesOpen}
+        locale={locale}
+        onToggleReleaseNotes={() => setIsReleaseNotesOpen((value) => !value)}
+        release={release}
+      />
 
       {isReleaseNotesOpen ? (
         <div className="release-notes-panel">
@@ -346,6 +387,155 @@ function ReleaseCard({
         </div>
       ) : null}
     </section>
+  );
+}
+
+function ArchiveReleaseList({
+  locale,
+  releases,
+}: {
+  locale: Locale;
+  releases: ReleaseRecord[];
+}) {
+  const copy = getCopy(locale);
+
+  return (
+    <section className="archive-section">
+      <div className="archive-section__header">
+        <p className="section-kicker">{copy.archiveKicker}</p>
+        <h2>{copy.moreDownloads}</h2>
+        <p>{copy.archiveDescription}</p>
+      </div>
+
+      {releases.length === 0 ? (
+        <p className="section-note">{copy.noOlderPackages}</p>
+      ) : (
+        <div className="archive-list">
+          {releases.map((release) => (
+            <ArchiveReleaseCard
+              key={release.id}
+              locale={locale}
+              release={release}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ArchiveReleaseCard({
+  locale,
+  release,
+}: {
+  locale: Locale;
+  release: ReleaseRecord;
+}) {
+  const [isReleaseNotesOpen, setIsReleaseNotesOpen] = useState(false);
+  const localizedReleaseNotes = getLocalizedReleaseNotes(
+    release.releaseNotesMarkdown,
+    locale,
+  );
+  const copy = getCopy(locale);
+
+  return (
+    <article className="archive-card">
+      <div className="archive-card__header">
+        <div>
+          <p className="archive-card__tag">{release.tagName}</p>
+          <h3>{release.name}</h3>
+        </div>
+        <span className="archive-card__date">
+          {formatReleaseDate(release.publishedAt, locale)}
+        </span>
+      </div>
+
+      <ReleaseAssetList locale={locale} release={release} />
+      <ReleaseCardActions
+        isReleaseNotesOpen={isReleaseNotesOpen}
+        locale={locale}
+        onToggleReleaseNotes={() => setIsReleaseNotesOpen((value) => !value)}
+        release={release}
+      />
+
+      {isReleaseNotesOpen ? (
+        <div className="release-notes-panel release-notes-panel--archive">
+          {localizedReleaseNotes ? (
+            <ReleaseNotesBody markdown={localizedReleaseNotes} />
+          ) : (
+            <p className="release-notes-empty">{copy.releaseNotesEmpty}</p>
+          )}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function ReleaseAssetList({
+  locale,
+  release,
+}: {
+  locale: Locale;
+  release: ReleaseRecord;
+}) {
+  return (
+    <div className="asset-list">
+      {release.assets.map((asset) => {
+        const assetLabel = inferAssetLabel(asset, locale);
+
+        return (
+          <a
+            key={asset.id}
+            aria-label={assetLabel}
+            className="asset-link"
+            href={asset.downloadUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            <span>{assetLabel}</span>
+            <span className="asset-link__meta">
+              {formatBytes(asset.sizeBytes)} · {asset.downloadCount}
+              {locale === "zh" ? " 次下载" : " downloads"}
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+function ReleaseCardActions({
+  isReleaseNotesOpen,
+  locale,
+  onToggleReleaseNotes,
+  release,
+}: {
+  isReleaseNotesOpen: boolean;
+  locale: Locale;
+  onToggleReleaseNotes: () => void;
+  release: ReleaseRecord;
+}) {
+  const copy = getCopy(locale);
+
+  return (
+    <div className="release-card__footer">
+      <button
+        aria-expanded={isReleaseNotesOpen}
+        className="release-notes-button"
+        onClick={onToggleReleaseNotes}
+        type="button"
+      >
+        {copy.releaseNotesButton}
+      </button>
+      <a
+        className="release-notes-link"
+        href={release.htmlUrl}
+        rel="noreferrer"
+        target="_blank"
+      >
+        {copy.viewOnGitHub}
+      </a>
+    </div>
   );
 }
 

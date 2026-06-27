@@ -2,13 +2,32 @@
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DownloadsExperience, DownloadsPage } from "./App";
 import { sampleCatalog } from "./fixtures";
 import { getCopy } from "./i18n";
+import { THEME_STORAGE_KEY } from "./theme";
+
+function mockMatchMedia(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation(() => ({
+      matches,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  });
+}
+
+beforeEach(() => {
+  window.localStorage.clear();
+  document.documentElement.removeAttribute("data-theme");
+  mockMatchMedia(false);
+});
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 describe("downloads page", () => {
@@ -53,12 +72,13 @@ describe("downloads page", () => {
     expect(screen.getByText("No public installers yet.")).toBeTruthy();
   });
 
-  it("renders latest stable, latest preview, and older release downloads", () => {
+  it("renders the stable, preview, and archive sections in the refreshed layout", () => {
     render(<DownloadsPage catalog={sampleCatalog} />);
 
-    const latestStableSection = screen.getByText("Latest stable release").closest(
-      "section",
-    );
+    expect(screen.getByText("01")).toBeTruthy();
+    const latestStableSection = screen
+      .getByRole("heading", { name: "Stable" })
+      .closest("section");
 
     expect(latestStableSection).toBeTruthy();
     expect(
@@ -116,9 +136,10 @@ describe("downloads page", () => {
       "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-linux-x64.deb",
     );
 
-    const latestPrereleaseSection = screen.getByText("Latest prerelease").closest(
-      "section",
-    );
+    expect(screen.getByText("02")).toBeTruthy();
+    const latestPrereleaseSection = screen
+      .getByRole("heading", { name: "Preview" })
+      .closest("section");
 
     expect(latestPrereleaseSection).toBeTruthy();
     expect(
@@ -146,7 +167,7 @@ describe("downloads page", () => {
     );
 
     const moreDownloadsSection = screen
-      .getByRole("heading", { name: "More downloads" })
+      .getByRole("heading", { name: "Archive" })
       .closest("section");
 
     expect(moreDownloadsSection).toBeTruthy();
@@ -162,6 +183,21 @@ describe("downloads page", () => {
         })
         .getAttribute("href"),
     ).toBe("https://example.com/releases/v1.0.0");
+  });
+
+  it("toggles the theme and persists the manual choice", async () => {
+    const user = userEvent.setup();
+
+    render(<DownloadsPage catalog={sampleCatalog} />);
+
+    expect(document.documentElement.dataset.theme).toBe("light");
+
+    await user.click(
+      screen.getByRole("button", { name: "Switch to dark mode" }),
+    );
+
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
   });
 
   it("shows a friendly empty state when no release assets exist yet", () => {
@@ -188,9 +224,9 @@ describe("downloads page", () => {
       screen.getByRole("heading", { name: getCopy("en").heroTitle }),
     ).toBeTruthy();
 
-    const latestPrereleaseSection = screen.getByText("Latest prerelease").closest(
-      "section",
-    );
+    const latestPrereleaseSection = screen
+      .getByRole("heading", { name: "Preview" })
+      .closest("section");
 
     expect(latestPrereleaseSection).toBeTruthy();
 
