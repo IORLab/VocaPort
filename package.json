@@ -6,7 +6,7 @@
     "build:web": "pnpm --filter @vocaport/web build",
     "build:desktop:web": "pnpm --filter @vocaport/desktop-mobile build",
     "check:desktop:native": "cargo check -p vocaport_native_shell",
-    "test:release-assets": "vitest run scripts/prepare-release-assets.test.mjs",
+    "test:release-assets": "vitest run scripts/prepare-release-assets.test.mjs scripts/publish-release-workflow.test.mjs",
     "typecheck": "pnpm -r --if-present typecheck",
     "test:ts": "pnpm run test:release-assets && pnpm -r --if-present test",
     "test:rust": "cargo test --workspace",
