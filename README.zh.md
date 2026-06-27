@@ -88,6 +88,19 @@ pnpm --filter @vocaport/desktop-mobile run android:init
 pnpm --filter @vocaport/desktop-mobile exec tauri android build --apk
 ```
 
+## 发布流程
+
+以后统一使用“推送 git tag”作为发布入口。例如：
+
+```bash
+git tag -a v0.1.0-beta.3 -m "VocaPort v0.1.0-beta.3"
+git push origin v0.1.0-beta.3
+```
+
+包含 `-alpha`、`-beta`、`-rc` 或 `-preview` 的 tag 会自动识别为 prerelease。GitHub Actions 会自动创建或复用对应的 GitHub Release，构建 Android 与 Desktop 产物，上传全部安装包，再刷新 GitHub Pages 下载站。
+
+本地不再需要执行 `gh auth login` 或 `gh release create`。发布流程统一由 GitHub Actions 内置的仓库 `GITHUB_TOKEN` 自动管理 GitHub Release。
+
 ## 常用命令
 
 | 命令 | 作用 |

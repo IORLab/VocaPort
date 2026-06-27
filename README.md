@@ -27,6 +27,19 @@ pnpm --filter @vocaport/downloads dev
 pnpm --filter @vocaport/desktop-mobile exec tauri dev
 ```
 
+## Release Flow / 发布流程
+
+Use a git tag push as the only supported release entrypoint. Example:
+
+```bash
+git tag -a v0.1.0-beta.3 -m "VocaPort v0.1.0-beta.3"
+git push origin v0.1.0-beta.3
+```
+
+Tags containing `-alpha`, `-beta`, `-rc`, or `-preview` are treated as prereleases automatically. GitHub Actions will create or reuse the matching GitHub Release, build the Android and Desktop assets, upload them, and then refresh the GitHub Pages downloads site.
+
+Local `gh auth login` and `gh release create` are no longer part of the release flow. The workflow uses the repository `GITHUB_TOKEN` inside GitHub Actions to manage the GitHub Release automatically.
+
 ## License / 开源协议
 
 - `VocaPort` is currently licensed under `AGPL-3.0-only`.

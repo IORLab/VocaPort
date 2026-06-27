@@ -1,44 +1,80 @@
 name: publish-release-assets
 
 on:
-  release:
-    types:
-      - published
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Existing GitHub release tag to receive the Android and Desktop assets
+        description: Existing GitHub release tag to rebuild or publish
         required: true
         type: string
 
 permissions:
   actions: write
-  contents: read
+  contents: write
 
 jobs:
   prepare-release:
     outputs:
-      release_tag: ${{ steps.resolve-release-tag.outputs.value }}
+      is_prerelease: ${{ steps.resolve-release.outputs.is_prerelease }}
+      release_name: ${{ steps.resolve-release.outputs.release_name }}
+      release_tag: ${{ steps.resolve-release.outputs.release_tag }}
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve release tag
-        id: resolve-release-tag
+      - name: Resolve release metadata
+        id: resolve-release
         env:
-          EVENT_RELEASE_TAG: ${{ github.event.release.tag_name }}
+          EVENT_REF_NAME: ${{ github.ref_name }}
+          EVENT_REF_TYPE: ${{ github.ref_type }}
           INPUT_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
         run: |
-          release_tag="${INPUT_RELEASE_TAG:-$EVENT_RELEASE_TAG}"
+          release_tag="$INPUT_RELEASE_TAG"
+          if [ -z "$release_tag" ] && [ "$EVENT_REF_TYPE" = "tag" ]; then
+            release_tag="$EVENT_REF_NAME"
+          fi
           if [ -z "$release_tag" ]; then
             echo "Missing release tag." >&2
             exit 1
           fi
-          echo "value=$release_tag" >> "$GITHUB_OUTPUT"
+          release_name="VocaPort $release_tag"
+          if printf '%s' "$release_tag" | grep -Eq -- '-(alpha|beta|rc)([.-][0-9]+)?$|-preview([.-][0-9]+)?$'; then
+            is_prerelease="true"
+          else
+            is_prerelease="false"
+          fi
+          echo "is_prerelease=$is_prerelease" >> "$GITHUB_OUTPUT"
+          echo "release_name=$release_name" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
 
-      - name: Validate release exists
+      - name: Ensure GitHub release exists
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.resolve-release-tag.outputs.value }}
-        run: gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY"
+          IS_PRERELEASE: ${{ steps.resolve-release.outputs.is_prerelease }}
+          RELEASE_NAME: ${{ steps.resolve-release.outputs.release_name }}
+          RELEASE_TAG: ${{ steps.resolve-release.outputs.release_tag }}
+        run: |
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists."
+            exit 0
+          fi
+
+          args=(
+            release
+            create
+            "$RELEASE_TAG"
+            --repo "$GITHUB_REPOSITORY"
+            --target "$GITHUB_SHA"
+            --title "$RELEASE_NAME"
+            --notes "Automated release for $RELEASE_TAG. Release assets will be uploaded after the build jobs finish."
+          )
+
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            args+=(--prerelease)
+          fi
+
+          gh "${args[@]}"
 
   build-android:
     needs: prepare-release
@@ -137,7 +173,7 @@ jobs:
             architecture: x64
             bundles: appimage,deb
             target: ""
-            search_root: apps/desktop-mobile/src-tauri/target/release/bundle
+            search_root: target/release/bundle
             artifact_name: release-assets-linux-x64
           - id: windows-x64
             runs_on: windows-latest
@@ -145,7 +181,7 @@ jobs:
             architecture: x64
             bundles: msi,nsis
             target: ""
-            search_root: apps/desktop-mobile/src-tauri/target/release/bundle
+            search_root: target/release/bundle
             artifact_name: release-assets-windows-x64
           - id: macos-intel
             runs_on: macos-15-intel
@@ -153,7 +189,7 @@ jobs:
             architecture: intel
             bundles: dmg
             target: x86_64-apple-darwin
-            search_root: apps/desktop-mobile/src-tauri/target/x86_64-apple-darwin/release/bundle
+            search_root: target/x86_64-apple-darwin/release/bundle
             artifact_name: release-assets-macos-intel
           - id: macos-arm64
             runs_on: macos-15
@@ -161,7 +197,7 @@ jobs:
             architecture: arm64
             bundles: dmg
             target: aarch64-apple-darwin
-            search_root: apps/desktop-mobile/src-tauri/target/aarch64-apple-darwin/release/bundle
+            search_root: target/aarch64-apple-darwin/release/bundle
             artifact_name: release-assets-macos-arm64
     steps:
       - name: Checkout

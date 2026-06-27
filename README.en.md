@@ -88,6 +88,19 @@ pnpm --filter @vocaport/desktop-mobile run android:init
 pnpm --filter @vocaport/desktop-mobile exec tauri android build --apk
 ```
 
+## Release Flow
+
+Use a git tag push as the only supported release entrypoint (发布入口). Example:
+
+```bash
+git tag -a v0.1.0-beta.3 -m "VocaPort v0.1.0-beta.3"
+git push origin v0.1.0-beta.3
+```
+
+Tags containing `-alpha`, `-beta`, `-rc`, or `-preview` are treated as prereleases (预发布版本) automatically. GitHub Actions creates or reuses the matching GitHub Release, builds the Android and Desktop assets, uploads them, and then refreshes the GitHub Pages downloads site.
+
+Local `gh auth login` and `gh release create` are no longer part of the release flow. GitHub Actions uses the repository `GITHUB_TOKEN` to manage the GitHub Release automatically.
+
 ## Common Commands
 
 | Command | Purpose |
