@@ -3,7 +3,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { DownloadsPage } from "./App";
+import { DownloadsExperience, DownloadsPage } from "./App";
 import { sampleCatalog } from "./fixtures";
 import { getCopy } from "./i18n";
 
@@ -12,6 +12,47 @@ afterEach(() => {
 });
 
 describe("downloads page", () => {
+  it("reuses the refreshed shell for loading, error, and empty states", () => {
+    const { rerender } = render(
+      <DownloadsExperience state={{ status: "loading" }} />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Official build manifest" }),
+    ).toBeTruthy();
+    expect(screen.getByText("Syncing public installers…")).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Open GitHub Releases" }),
+    ).toBeTruthy();
+
+    rerender(
+      <DownloadsExperience
+        state={{ status: "error", message: "Failed to load release catalog: 500" }}
+      />,
+    );
+
+    expect(
+      screen.getByText("Release data is temporarily unavailable."),
+    ).toBeTruthy();
+    expect(screen.getByText("Failed to load release catalog: 500")).toBeTruthy();
+
+    rerender(
+      <DownloadsExperience
+        state={{
+          status: "ready",
+          catalog: {
+            owner: "IORLab",
+            repo: "VocaPort",
+            generatedAt: "2026-06-26T10:00:00.000Z",
+            releases: [],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("No public installers yet.")).toBeTruthy();
+  });
+
   it("renders latest stable, latest preview, and older release downloads", () => {
     render(<DownloadsPage catalog={sampleCatalog} />);
 
@@ -135,7 +176,7 @@ describe("downloads page", () => {
       />,
     );
 
-    expect(screen.getByText("No downloadable packages yet.")).toBeTruthy();
+    expect(screen.getByText(getCopy("en").emptyTitle)).toBeTruthy();
   });
 
   it("switches language and expands localized release notes inline", async () => {

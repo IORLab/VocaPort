@@ -1,17 +1,11 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { DownloadsPage } from "./App";
+import { DownloadsExperience, type DownloadsViewState } from "./App";
 import { loadReleaseCatalog } from "./catalog";
 import "./index.css";
-import type { ReleaseCatalog } from "./types";
-
-type BootstrapState =
-  | { status: "loading" }
-  | { status: "ready"; catalog: ReleaseCatalog }
-  | { status: "error"; message: string };
 
 function DownloadsApp() {
-  const [state, setState] = useState<BootstrapState>({ status: "loading" });
+  const [state, setState] = useState<DownloadsViewState>({ status: "loading" });
 
   useEffect(() => {
     void loadReleaseCatalog(`${import.meta.env.BASE_URL}releases.json`)
@@ -25,30 +19,7 @@ function DownloadsApp() {
       });
   }, []);
 
-  if (state.status === "loading") {
-    return (
-      <main className="downloads-page">
-        <section className="status-screen">
-          <p className="hero-kicker">VocaPort</p>
-          <h1>Loading downloads…</h1>
-        </section>
-      </main>
-    );
-  }
-
-  if (state.status === "error") {
-    return (
-      <main className="downloads-page">
-        <section className="status-screen">
-          <p className="hero-kicker">VocaPort</p>
-          <h1>Could not load release data</h1>
-          <p>{state.message}</p>
-        </section>
-      </main>
-    );
-  }
-
-  return <DownloadsPage catalog={state.catalog} />;
+  return <DownloadsExperience state={state} />;
 }
 
 const rootElement = document.getElementById("root");

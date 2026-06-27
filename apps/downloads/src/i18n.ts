@@ -5,14 +5,20 @@ export interface DownloadsCopy {
   archiveKicker: string;
   emptyDescription: string;
   emptyTitle: string;
+  errorDescription: string;
+  errorTitle: string;
   featuredDownloadsAriaLabel: string;
   footerGeneratedPrefix: string;
   footerUpdatedPrefix: string;
+  githubReleasesButton: string;
   heroDescription: string;
+  heroEyebrow: string;
   heroTitle: string;
   languageSwitcherLabel: string;
   latestPrerelease: string;
   latestStable: string;
+  loadingDescription: string;
+  loadingTitle: string;
   moreDownloads: string;
   noOlderPackages: string;
   prereleaseBadge: string;
@@ -28,17 +34,24 @@ const copyByLocale: Record<Locale, DownloadsCopy> = {
       "Browse older stable releases and prerelease builds. Expand the release notes before installing if you want a quick change summary.",
     archiveKicker: "Archive",
     emptyDescription:
-      "Public GitHub Releases have not been published yet. This page will fill itself once release assets are attached.",
-    emptyTitle: "No downloadable packages yet.",
+      "Public GitHub installers have not been published yet. This page will update itself once release assets are attached.",
+    emptyTitle: "No public installers yet.",
+    errorDescription: "Release data is temporarily unavailable.",
+    errorTitle: "Could not load the installer catalog.",
     featuredDownloadsAriaLabel: "Featured downloads",
     footerGeneratedPrefix: "Generated from GitHub Releases for",
     footerUpdatedPrefix: "Updated",
+    githubReleasesButton: "Open GitHub Releases",
     heroDescription:
-      "Grab the latest stable release, try the newest preview, or roll back to an older package without digging through release history by hand.",
-    heroTitle: "All builds, one page",
+      "Install the latest stable build, test the newest preview, or roll back to an older package without digging through release history by hand.",
+    heroEyebrow: "VocaPort Download Desk",
+    heroTitle: "Official build manifest",
     languageSwitcherLabel: "Language",
     latestPrerelease: "Latest prerelease",
     latestStable: "Latest stable release",
+    loadingDescription:
+      "The page is syncing the current public release list from GitHub.",
+    loadingTitle: "Syncing public installers…",
     moreDownloads: "More downloads",
     noOlderPackages: "No older public packages are available yet.",
     prereleaseBadge: "Prerelease",
@@ -52,17 +65,23 @@ const copyByLocale: Record<Locale, DownloadsCopy> = {
       "浏览更早的稳定版和预发布包。安装前可先展开版本说明，快速查看本次变更。",
     archiveKicker: "历史版本",
     emptyDescription:
-      "GitHub Releases 还没有公开发布安装包。只要 release 附上资产，这个页面就会自动显示出来。",
-    emptyTitle: "暂时还没有可下载的安装包。",
+      "GitHub Releases 暂时还没有公开安装包。只要 release 附上资产，这个页面就会自动更新。",
+    emptyTitle: "暂时还没有公开安装包。",
+    errorDescription: "当前暂时无法加载 release 数据。",
+    errorTitle: "暂时无法加载安装包目录。",
     featuredDownloadsAriaLabel: "精选下载",
     footerGeneratedPrefix: "数据来自 GitHub Releases：",
     footerUpdatedPrefix: "更新于",
+    githubReleasesButton: "打开 GitHub Releases",
     heroDescription:
-      "直接下载最新稳定版、最新预发布版，或回退到旧版本，不用再手动翻 release 历史。",
-    heroTitle: "一页下载全部版本",
+      "直接安装最新稳定版、试用最新预发布版，或回退到旧版本，不用再手动翻 release 历史。",
+    heroEyebrow: "VocaPort 下载总览",
+    heroTitle: "官方安装包总览",
     languageSwitcherLabel: "语言切换",
     latestPrerelease: "最新预发布版",
     latestStable: "最新稳定版",
+    loadingDescription: "页面正在同步 GitHub 上当前公开的安装包列表。",
+    loadingTitle: "正在同步公开安装包……",
     moreDownloads: "更多下载",
     noOlderPackages: "暂时还没有更早的公开安装包。",
     prereleaseBadge: "预发布",

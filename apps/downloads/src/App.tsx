@@ -1,4 +1,4 @@
-import { useState, type PropsWithChildren } from "react";
+import { useEffect, useState, type PropsWithChildren } from "react";
 import {
   formatBytes,
   formatReleaseDate,
@@ -10,30 +10,136 @@ import {
   getLocalizedReleaseNotes,
   type Locale,
 } from "./i18n";
+import { getInitialTheme, type Theme } from "./theme";
 import type { ReleaseCatalog, ReleaseRecord } from "./types";
 
 interface DownloadsPageProps {
   catalog: ReleaseCatalog;
 }
 
-export function DownloadsPage({ catalog }: DownloadsPageProps) {
+export type DownloadsViewState =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "ready"; catalog: ReleaseCatalog };
+
+const FALLBACK_REPOSITORY = {
+  owner: "IORLab",
+  repo: "VocaPort",
+} as const;
+
+function getBrowserThemeDependencies() {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  return {
+    storage: window.localStorage,
+    matchMedia:
+      typeof window.matchMedia === "function"
+        ? window.matchMedia.bind(window)
+        : undefined,
+  };
+}
+
+export function DownloadsExperience({
+  state,
+}: {
+  state: DownloadsViewState;
+}) {
   const [locale, setLocale] = useState<Locale>("en");
+  const [theme] = useState<Theme>(() =>
+    getInitialTheme(getBrowserThemeDependencies()),
+  );
   const copy = getCopy(locale);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  }, [theme]);
+
+  const repository =
+    state.status === "ready"
+      ? { owner: state.catalog.owner, repo: state.catalog.repo }
+      : FALLBACK_REPOSITORY;
+  const githubReleasesUrl = `https://github.com/${repository.owner}/${repository.repo}/releases`;
+
+  return (
+    <PageFrame>
+      <Hero
+        githubReleasesUrl={githubReleasesUrl}
+        locale={locale}
+        onLocaleChange={setLocale}
+      />
+      <PageBody locale={locale} state={state} />
+      {state.status === "ready" ? (
+        <footer className="page-footer">
+          <span>
+            {copy.footerGeneratedPrefix} {state.catalog.owner}/{state.catalog.repo}
+          </span>
+          <span>
+            {copy.footerUpdatedPrefix}{" "}
+            {formatReleaseDate(state.catalog.generatedAt, locale)}
+          </span>
+        </footer>
+      ) : null}
+    </PageFrame>
+  );
+}
+
+export function DownloadsPage({ catalog }: DownloadsPageProps) {
+  return <DownloadsExperience state={{ status: "ready", catalog }} />;
+}
+
+function PageFrame({ children }: PropsWithChildren) {
+  return <main className="downloads-page">{children}</main>;
+}
+
+function PageBody({
+  locale,
+  state,
+}: {
+  locale: Locale;
+  state: DownloadsViewState;
+}) {
+  const copy = getCopy(locale);
+
+  if (state.status === "loading") {
+    return (
+      <StatePanel
+        description={copy.loadingDescription}
+        title={copy.loadingTitle}
+      />
+    );
+  }
+
+  if (state.status === "error") {
+    return (
+      <StatePanel
+        description={copy.errorDescription}
+        detail={state.message}
+        title={copy.errorTitle}
+      />
+    );
+  }
+
   const { latestStable, latestPrerelease, previousReleases } =
-    selectReleaseSections(catalog);
+    selectReleaseSections(state.catalog);
 
   if (!latestStable && !latestPrerelease && previousReleases.length === 0) {
     return (
-      <PageFrame>
-        <Hero locale={locale} onLocaleChange={setLocale} />
-        <EmptyState locale={locale} />
-      </PageFrame>
+      <StatePanel
+        description={copy.emptyDescription}
+        title={copy.emptyTitle}
+      />
     );
   }
 
   return (
-    <PageFrame>
-      <Hero locale={locale} onLocaleChange={setLocale} />
+    <>
       <section
         className="downloads-grid"
         aria-label={copy.featuredDownloadsAriaLabel}
@@ -79,27 +185,16 @@ export function DownloadsPage({ catalog }: DownloadsPageProps) {
           </div>
         )}
       </section>
-
-      <footer className="page-footer">
-        <span>
-          {copy.footerGeneratedPrefix} {catalog.owner}/{catalog.repo}
-        </span>
-        <span>
-          {copy.footerUpdatedPrefix} {formatReleaseDate(catalog.generatedAt, locale)}
-        </span>
-      </footer>
-    </PageFrame>
+    </>
   );
 }
 
-function PageFrame({ children }: PropsWithChildren) {
-  return <main className="downloads-page">{children}</main>;
-}
-
 function Hero({
+  githubReleasesUrl,
   locale,
   onLocaleChange,
 }: {
+  githubReleasesUrl: string;
   locale: Locale;
   onLocaleChange: (locale: Locale) => void;
 }) {
@@ -108,12 +203,20 @@ function Hero({
   return (
     <header className="hero">
       <div className="hero__topbar">
-        <p className="hero-kicker">VocaPort</p>
+        <p className="hero-kicker">{copy.heroEyebrow}</p>
         <div
           className="locale-switcher"
           aria-label={copy.languageSwitcherLabel}
           role="group"
         >
+          <a
+            className="release-notes-link"
+            href={githubReleasesUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            {copy.githubReleasesButton}
+          </a>
           <button
             aria-pressed={locale === "zh"}
             className={`locale-switcher__button${locale === "zh" ? " locale-switcher__button--active" : ""}`}
@@ -138,13 +241,20 @@ function Hero({
   );
 }
 
-function EmptyState({ locale }: { locale: Locale }) {
-  const copy = getCopy(locale);
-
+function StatePanel({
+  description,
+  detail,
+  title,
+}: {
+  description: string;
+  detail?: string;
+  title: string;
+}) {
   return (
-    <section className="empty-state">
-      <h2>{copy.emptyTitle}</h2>
-      <p>{copy.emptyDescription}</p>
+    <section className="status-screen state-panel">
+      <h2>{title}</h2>
+      <p>{description}</p>
+      {detail ? <p>{detail}</p> : null}
     </section>
   );
 }
