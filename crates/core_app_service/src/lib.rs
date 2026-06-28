@@ -7,11 +7,15 @@ use core_bridge_contract::{
 };
 use core_domain::{SessionQuestionSnapshot, StudyCard, StudySession, VocabularyEntry};
 use core_events::{ImportRecord, ProgressReset, ReviewEvent, ReviewEventSource, ReviewState};
-use importer_apkg::{commit_apkg, load_imported_deck_bundle, preview_apkg, ImportPreviewError};
+use importer_apkg::{
+    commit_apkg, load_imported_deck_bundle, load_imported_deck_bundle_from_path, preview_apkg,
+    preview_apkg_from_path, ImportPreviewError,
+};
 use quiz_mcq::build_question;
 use scheduler_fsrs::{rebuild_review_state, select_next_card};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -143,7 +147,24 @@ impl PhaseOneService {
             preview.import_id.clone(),
             PendingImport {
                 file_name: file_name.to_string(),
-                file_bytes: file_bytes.to_vec(),
+                source: PendingImportSource::FileBytes(file_bytes.to_vec()),
+                preview: preview.clone(),
+            },
+        );
+
+        Ok(preview)
+    }
+
+    pub fn preview_apkg_from_path(
+        &mut self,
+        file_path: &Path,
+    ) -> Result<ImportPreviewResponse, PhaseOneServiceError> {
+        let preview = preview_apkg_from_path(file_path)?;
+        self.pending_imports.insert(
+            preview.import_id.clone(),
+            PendingImport {
+                file_name: preview.file_name.clone(),
+                source: PendingImportSource::FilePath(file_path.to_path_buf()),
                 preview: preview.clone(),
             },
         );
@@ -160,15 +181,25 @@ impl PhaseOneService {
             .remove(&request.import_id)
             .ok_or_else(|| PhaseOneServiceError::MissingImportPreview(request.import_id.clone()))?;
         let import_summary = commit_apkg(request.clone())?;
-        let bundle = load_imported_deck_bundle(
-            &pending.file_name,
-            &pending.file_bytes,
-            &request.confirmed_field_mapping,
-            request
-                .target_deck_id
-                .as_deref()
-                .or(pending.preview.resolved_deck_id.as_deref()),
-        )?;
+        let bundle = match &pending.source {
+            PendingImportSource::FileBytes(file_bytes) => load_imported_deck_bundle(
+                &pending.file_name,
+                file_bytes,
+                &request.confirmed_field_mapping,
+                request
+                    .target_deck_id
+                    .as_deref()
+                    .or(pending.preview.resolved_deck_id.as_deref()),
+            )?,
+            PendingImportSource::FilePath(file_path) => load_imported_deck_bundle_from_path(
+                file_path,
+                &request.confirmed_field_mapping,
+                request
+                    .target_deck_id
+                    .as_deref()
+                    .or(pending.preview.resolved_deck_id.as_deref()),
+            )?,
+        };
         let imported_at = self.next_timestamp();
         let import_record_id = format!("import-{}", request.import_id);
 
@@ -291,7 +322,10 @@ impl PhaseOneService {
 
     pub fn get_active_session(&self) -> Result<ActiveSessionResponse, PhaseOneServiceError> {
         Ok(ActiveSessionResponse {
-            question: self.active_session.as_ref().map(|session| session.question.clone()),
+            question: self
+                .active_session
+                .as_ref()
+                .map(|session| session.question.clone()),
         })
     }
 
@@ -315,9 +349,7 @@ impl PhaseOneService {
         let deck_state = self
             .decks
             .get(&deck_id)
-            .ok_or_else(|| {
-                PhaseOneServiceError::MissingDeck(deck_id.clone())
-            })?;
+            .ok_or_else(|| PhaseOneServiceError::MissingDeck(deck_id.clone()))?;
         let card = deck_state
             .cards
             .iter()
@@ -379,12 +411,13 @@ impl PhaseOneService {
                 is_session_complete: true,
             }
         } else {
-                let (next_question, next_correct_option_id, next_remaining) = self.build_next_question(
-                &deck_id,
-                &active_session.session_mode,
-                &active_session.session.remaining_card_ids,
-                &active_session.session.id,
-            )?;
+            let (next_question, next_correct_option_id, next_remaining) = self
+                .build_next_question(
+                    &deck_id,
+                    &active_session.session_mode,
+                    &active_session.session.remaining_card_ids,
+                    &active_session.session.id,
+                )?;
             active_session.correct_option_id = next_correct_option_id.clone();
             active_session.question = next_question.clone();
             active_session.session.current_question = Some(snapshot_from_question(&next_question));
@@ -454,18 +487,28 @@ impl PhaseOneService {
             }
             ProgressResetScope::Card => {
                 if let Some(active_session) = &self.active_session {
-                    if active_session.session.current_question.as_ref().and_then(|snapshot| {
-                        snapshot
-                            .card_id
-                            .eq(reset.target_card_id.as_deref().unwrap_or_default())
-                            .then_some(())
-                    }).is_some() {
+                    if active_session
+                        .session
+                        .current_question
+                        .as_ref()
+                        .and_then(|snapshot| {
+                            snapshot
+                                .card_id
+                                .eq(reset.target_card_id.as_deref().unwrap_or_default())
+                                .then_some(())
+                        })
+                        .is_some()
+                    {
                         self.active_session = None;
                     }
                 }
                 if let Some(target_card_id) = &reset.target_card_id {
                     for deck_state in self.decks.values_mut() {
-                        if deck_state.cards.iter().any(|card| card.id == *target_card_id) {
+                        if deck_state
+                            .cards
+                            .iter()
+                            .any(|card| card.id == *target_card_id)
+                        {
                             deck_state.resets.push(reset.clone());
                             break;
                         }
@@ -493,12 +536,8 @@ impl PhaseOneService {
             .iter()
             .filter_map(|card_id| {
                 let latest_reset = latest_reset_for(&deck_state.resets, card_id, deck_id);
-                let review_state = rebuild_review_state(
-                    card_id,
-                    deck_id,
-                    &deck_state.review_events,
-                    latest_reset,
-                );
+                let review_state =
+                    rebuild_review_state(card_id, deck_id, &deck_state.review_events, latest_reset);
 
                 candidate_card_ids
                     .iter()
@@ -537,7 +576,11 @@ impl PhaseOneService {
             .cloned()
             .collect::<Vec<_>>();
 
-        Ok((question.clone(), question.options[0].id.clone(), remaining_card_ids))
+        Ok((
+            question.clone(),
+            question.options[0].id.clone(),
+            remaining_card_ids,
+        ))
     }
 
     fn next_timestamp(&mut self) -> String {
@@ -550,8 +593,14 @@ impl PhaseOneService {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PendingImport {
     file_name: String,
-    file_bytes: Vec<u8>,
+    source: PendingImportSource,
     preview: ImportPreviewResponse,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum PendingImportSource {
+    FileBytes(Vec<u8>),
+    FilePath(PathBuf),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -620,7 +669,11 @@ fn snapshot_from_question(question: &QuestionDto) -> SessionQuestionSnapshot {
         card_id: question.card_id.clone(),
         prompt_kind: question_prompt_label(&question.prompt_kind).to_string(),
         prompt_value: question.prompt_value.clone(),
-        option_ids: question.options.iter().map(|option| option.id.clone()).collect(),
+        option_ids: question
+            .options
+            .iter()
+            .map(|option| option.id.clone())
+            .collect(),
         option_kinds: question
             .options
             .iter()

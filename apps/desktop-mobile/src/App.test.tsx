@@ -5,8 +5,23 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
+const mockInvoke = vi.fn();
+const mockOpenDialog = vi.fn();
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: mockInvoke,
+}));
+
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  open: mockOpenDialog,
+}));
+
 afterEach(() => {
   cleanup();
+  mockInvoke.mockReset();
+  mockOpenDialog.mockReset();
+  delete (window as typeof window & { __TAURI_INTERNALS__?: object })
+    .__TAURI_INTERNALS__;
 });
 
 describe("desktop app usability", () => {
@@ -58,5 +73,76 @@ describe("desktop app usability", () => {
     await user.click(screen.getByRole("tab", { name: "学习" }));
     await user.click(screen.getByRole("button", { name: "开始学习" }));
     expect(await screen.findByText("apple")).toBeTruthy();
+  });
+
+  it("uses the native desktop picker and path-based preview for large apkg files", async () => {
+    const user = userEvent.setup();
+    (window as typeof window & { __TAURI_INTERNALS__?: object })
+      .__TAURI_INTERNALS__ = {};
+
+    mockOpenDialog.mockResolvedValue("/Users/jay/Downloads/eggrolls-JLPT10k-v3.5.apkg");
+    mockInvoke.mockImplementation(async (command: string, payload?: unknown) => {
+      if (command === "native_health_ping") {
+        return "vocaport-ready";
+      }
+
+      if (command === "list_decks") {
+        return {
+          decks: [],
+        };
+      }
+
+      if (command === "get_active_session") {
+        return {
+          question: undefined,
+        };
+      }
+
+      if (command === "preview_apkg_from_path") {
+        expect(payload).toEqual({
+          request: {
+            filePath: "/Users/jay/Downloads/eggrolls-JLPT10k-v3.5.apkg",
+          },
+        });
+
+        return {
+          importId: "preview-native",
+          fileHash: "hash-native",
+          deckName: "eggrolls-JLPT10k-v3.5",
+          resolvedDeckId: "deck-eggrolls",
+          fileName: "eggrolls-JLPT10k-v3.5.apkg",
+          entryCount: 10622,
+          reviewEventCount: 0,
+          mediaCount: 26956,
+          availableFieldNames: ["Back", "Example", "Front"],
+          fieldCandidates: {
+            lemma: { fieldName: "Front", confidence: 100 },
+            meaning: { fieldName: "Back", confidence: 100 },
+          },
+          unresolvedFields: [],
+          warningMessages: [],
+          isDuplicateFile: false,
+          reimportTargetDeckId: "deck-eggrolls",
+        };
+      }
+
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    expect(screen.queryByLabelText("选择词库文件")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "选择词库文件" }));
+    expect(mockOpenDialog).toHaveBeenCalledOnce();
+
+    await user.click(screen.getByRole("button", { name: "预览导入" }));
+
+    expect(await screen.findByText("eggrolls-JLPT10k-v3.5")).toBeTruthy();
+    expect(mockInvoke).toHaveBeenCalledWith("preview_apkg_from_path", {
+      request: {
+        filePath: "/Users/jay/Downloads/eggrolls-JLPT10k-v3.5.apkg",
+      },
+    });
   });
 });

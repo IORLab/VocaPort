@@ -6,6 +6,7 @@ import type {
   DeckSummaryDto,
   ImportCommitRequest,
   ImportCommitResponse,
+  ImportPreviewFromPathRequest,
   ImportPreviewRequest,
   ImportPreviewResponse,
   ListDecksResponse,
@@ -84,21 +85,42 @@ function toOptionalField(value: string) {
   return value.trim().length > 0 ? value : undefined;
 }
 
+interface NativeImportSelection {
+  fileName: string;
+  filePath: string;
+}
+
+type SelectedImportFile =
+  | {
+      kind: "browser-file";
+      displayName: string;
+      file: File;
+    }
+  | {
+      kind: "native-path";
+      displayName: string;
+      filePath: string;
+    };
+
 interface PhaseOneWorkspaceProps {
   openExternalUrl?: (url: string) => Promise<void> | void;
+  pickImportFile?: () => Promise<NativeImportSelection | null>;
   runtime: BridgeRuntimeAdapter;
   platformName: string;
 }
 
 export function PhaseOneWorkspace({
   openExternalUrl,
+  pickImportFile,
   runtime,
   platformName,
 }: PhaseOneWorkspaceProps) {
   const fileInputId = useId();
   const [activeTabId, setActiveTabId] = useState<WorkspaceTabId>("import");
   const [healthStatus, setHealthStatus] = useState("连接中");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedImport, setSelectedImport] = useState<SelectedImportFile | null>(
+    null,
+  );
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
   const [fieldMapping, setFieldMapping] = useState<ImportFieldMappingForm | null>(
     null,
@@ -106,6 +128,8 @@ export function PhaseOneWorkspace({
   const [commitSummary, setCommitSummary] = useState<ImportCommitResponse | null>(
     null,
   );
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [decks, setDecks] = useState<DeckSummaryDto[]>([]);
   const [question, setQuestion] = useState<QuestionDto | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -165,20 +189,30 @@ export function PhaseOneWorkspace({
   }, [runtime]);
 
   async function handlePreviewImport() {
-    if (!selectedFile) {
+    if (!selectedImport) {
       setStatusMessage("请先选择一个 `.apkg` 文件。");
       return;
     }
 
+    setIsPreviewing(true);
+    setStatusMessage("正在预览词库…");
+
     try {
-      const fileBytes = await readFileBytes(selectedFile);
-      const response = await runtime.invoke<
-        ImportPreviewRequest,
-        ImportPreviewResponse
-      >("import.previewApkg", {
-        fileName: selectedFile.name,
-        fileBytes,
-      });
+      const response =
+        selectedImport.kind === "native-path"
+          ? await runtime.invoke<
+              ImportPreviewFromPathRequest,
+              ImportPreviewResponse
+            >("import.previewApkgFromPath", {
+              filePath: selectedImport.filePath,
+            })
+          : await runtime.invoke<ImportPreviewRequest, ImportPreviewResponse>(
+              "import.previewApkg",
+              {
+                fileName: selectedImport.file.name,
+                fileBytes: await readFileBytes(selectedImport.file),
+              },
+            );
 
       setPreview(response);
       setFieldMapping(buildInitialFieldMapping(response));
@@ -187,6 +221,8 @@ export function PhaseOneWorkspace({
       setStatusMessage(null);
     } catch (error) {
       setStatusMessage(formatRuntimeError(error, "导入预览失败。"));
+    } finally {
+      setIsPreviewing(false);
     }
   }
 
@@ -215,6 +251,9 @@ export function PhaseOneWorkspace({
       return;
     }
 
+    setIsImporting(true);
+    setStatusMessage("正在导入词库…");
+
     try {
       const response = await runtime.invoke<
         ImportCommitRequest,
@@ -238,7 +277,52 @@ export function PhaseOneWorkspace({
       setStatusMessage("导入完成，请在词库页确认当前词库。");
     } catch (error) {
       setStatusMessage(formatRuntimeError(error, "确认导入失败。"));
+    } finally {
+      setIsImporting(false);
     }
+  }
+
+  async function handlePickImportFile() {
+    if (!pickImportFile) {
+      return;
+    }
+
+    try {
+      const selection = await pickImportFile();
+      if (!selection) {
+        return;
+      }
+
+      resetSelectedImportState();
+      setSelectedImport({
+        kind: "native-path",
+        displayName: selection.fileName,
+        filePath: selection.filePath,
+      });
+      setStatusMessage(null);
+    } catch (error) {
+      setStatusMessage(formatRuntimeError(error, "选择词库文件失败。"));
+    }
+  }
+
+  function handleBrowserFileChange(file: File | null) {
+    resetSelectedImportState();
+    setSelectedImport(
+      file
+        ? {
+            kind: "browser-file",
+            displayName: file.name,
+            file,
+          }
+        : null,
+    );
+    setStatusMessage(null);
+  }
+
+  function resetSelectedImportState() {
+    setPreview(null);
+    setFieldMapping(null);
+    setCommitSummary(null);
   }
 
   async function handleSelectDeck(deckId: string) {
@@ -448,17 +532,26 @@ export function PhaseOneWorkspace({
           {activeTabId === "import" ? (
             <ImportPanel
               canCommit={Boolean(
-                preview && fieldMapping?.lemmaField && fieldMapping.meaningField,
+                preview &&
+                  fieldMapping?.lemmaField &&
+                  fieldMapping.meaningField &&
+                  !isPreviewing &&
+                  !isImporting,
               )}
-              canPreview={Boolean(selectedFile)}
+              canPreview={Boolean(selectedImport) && !isPreviewing && !isImporting}
               commitSummary={commitSummary}
               fieldMapping={fieldMapping}
               fileInputId={fileInputId}
+              isImporting={isImporting}
+              isPreviewing={isPreviewing}
               preview={preview}
-              selectedFileName={selectedFile?.name}
+              selectedFileName={selectedImport?.displayName}
               onCommitImport={() => void handleCommitImport()}
               onFieldMappingChange={handleFieldMappingChange}
-              onFileChange={setSelectedFile}
+              onFileChange={handleBrowserFileChange}
+              onPickNativeFile={
+                pickImportFile ? () => void handlePickImportFile() : undefined
+              }
               onPreviewImport={() => void handlePreviewImport()}
             />
           ) : null}

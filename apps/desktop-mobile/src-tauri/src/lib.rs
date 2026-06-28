@@ -3,8 +3,8 @@ pub mod storage;
 use core_app_service::PhaseOneService;
 use core_bridge_contract::{
     ActiveSessionResponse, AnswerQuestionRequest, AnswerQuestionResponse, ImportCommitRequest,
-    ImportCommitResponse, ImportPreviewResponse, ListDecksResponse, ResetProgressRequest,
-    SelectDeckRequest, SelectDeckResponse, StartSessionRequest,
+    ImportCommitResponse, ImportPreviewFromPathRequest, ImportPreviewResponse, ListDecksResponse,
+    ResetProgressRequest, SelectDeckRequest, SelectDeckResponse, StartSessionRequest,
 };
 use std::error::Error;
 use std::sync::Arc;
@@ -37,7 +37,7 @@ fn list_capabilities(state: tauri::State<'_, AppState>) -> Result<Vec<String>, S
 }
 
 #[tauri::command]
-fn preview_apkg(
+async fn preview_apkg(
     state: tauri::State<'_, AppState>,
     file_name: String,
     file_bytes: Vec<u8>,
@@ -53,7 +53,22 @@ fn preview_apkg(
 }
 
 #[tauri::command]
-fn commit_apkg(
+async fn preview_apkg_from_path(
+    state: tauri::State<'_, AppState>,
+    request: ImportPreviewFromPathRequest,
+) -> Result<ImportPreviewResponse, String> {
+    let mut service = state
+        .service
+        .lock()
+        .map_err(|_| "failed to lock PhaseOneService".to_string())?;
+
+    service
+        .preview_apkg_from_path(std::path::Path::new(&request.file_path))
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn commit_apkg(
     state: tauri::State<'_, AppState>,
     request: ImportCommitRequest,
 ) -> Result<ImportCommitResponse, String> {
@@ -61,7 +76,9 @@ fn commit_apkg(
         .service
         .lock()
         .map_err(|_| "failed to lock PhaseOneService".to_string())?;
-    let response = service.commit_apkg(request).map_err(|error| error.to_string())?;
+    let response = service
+        .commit_apkg(request)
+        .map_err(|error| error.to_string())?;
     let snapshot_json = service
         .export_snapshot_json()
         .map_err(|error| error.to_string())?;
@@ -94,7 +111,9 @@ fn select_deck(
         .service
         .lock()
         .map_err(|_| "failed to lock PhaseOneService".to_string())?;
-    let response = service.select_deck(request).map_err(|error| error.to_string())?;
+    let response = service
+        .select_deck(request)
+        .map_err(|error| error.to_string())?;
     let snapshot_json = service
         .export_snapshot_json()
         .map_err(|error| error.to_string())?;
@@ -109,15 +128,15 @@ fn select_deck(
 }
 
 #[tauri::command]
-fn get_active_session(
-    state: tauri::State<'_, AppState>,
-) -> Result<ActiveSessionResponse, String> {
+fn get_active_session(state: tauri::State<'_, AppState>) -> Result<ActiveSessionResponse, String> {
     let service = state
         .service
         .lock()
         .map_err(|_| "failed to lock PhaseOneService".to_string())?;
 
-    service.get_active_session().map_err(|error| error.to_string())
+    service
+        .get_active_session()
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -129,7 +148,9 @@ fn start_session(
         .service
         .lock()
         .map_err(|_| "failed to lock PhaseOneService".to_string())?;
-    let response = service.start_session(request).map_err(|error| error.to_string())?;
+    let response = service
+        .start_session(request)
+        .map_err(|error| error.to_string())?;
     let snapshot_json = service
         .export_snapshot_json()
         .map_err(|error| error.to_string())?;
@@ -202,6 +223,7 @@ fn reset_progress(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| -> Result<(), Box<dyn Error>> {
             let app_data_dir = app.path().app_local_data_dir()?;
@@ -226,6 +248,7 @@ pub fn run() {
             native_health_ping,
             list_capabilities,
             preview_apkg,
+            preview_apkg_from_path,
             commit_apkg,
             list_decks,
             select_deck,

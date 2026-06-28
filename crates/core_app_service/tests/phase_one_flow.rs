@@ -155,10 +155,8 @@ fn reset_progress_keeps_review_history_and_adds_a_reset_boundary() {
         })
         .unwrap();
 
-    let snapshot_before_reset = serde_json::from_str::<Value>(
-        &service.export_snapshot_json().unwrap(),
-    )
-    .unwrap();
+    let snapshot_before_reset =
+        serde_json::from_str::<Value>(&service.export_snapshot_json().unwrap()).unwrap();
     let review_events_before_reset = snapshot_before_reset["decks"][commit.deck_id.as_str()]
         ["review_events"]
         .as_array()
@@ -174,15 +172,10 @@ fn reset_progress_keeps_review_history_and_adds_a_reset_boundary() {
         })
         .unwrap();
 
-    let snapshot_after_reset = serde_json::from_str::<Value>(
-        &service.export_snapshot_json().unwrap(),
-    )
-    .unwrap();
+    let snapshot_after_reset =
+        serde_json::from_str::<Value>(&service.export_snapshot_json().unwrap()).unwrap();
     let deck_snapshot = &snapshot_after_reset["decks"][commit.deck_id.as_str()];
-    let review_events_after_reset = deck_snapshot["review_events"]
-        .as_array()
-        .unwrap()
-        .len();
+    let review_events_after_reset = deck_snapshot["review_events"].as_array().unwrap().len();
     let resets_after_reset = deck_snapshot["resets"].as_array().unwrap().len();
 
     assert_eq!(review_events_before_reset, 1);

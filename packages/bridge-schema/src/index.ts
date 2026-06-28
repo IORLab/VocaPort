@@ -116,6 +116,10 @@ export interface ImportPreviewRequest {
   fileBytes: Uint8Array;
 }
 
+export interface ImportPreviewFromPathRequest {
+  filePath: string;
+}
+
 export interface FieldCandidate {
   fieldName: string;
   confidence: number;

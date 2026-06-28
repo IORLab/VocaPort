@@ -1,8 +1,10 @@
+import type { ImportPreviewFromPathRequest } from "@vocaport/ts-sdk";
 import { createPhaseOneStubRuntime } from "@vocaport/ts-sdk";
 
 const nativeCommandMap = {
   "module.listCapabilities": "list_capabilities",
   "import.previewApkg": "preview_apkg",
+  "import.previewApkgFromPath": "preview_apkg_from_path",
   "import.commitApkg": "commit_apkg",
   "library.listDecks": "list_decks",
   "library.selectDeck": "select_deck",
@@ -12,8 +14,40 @@ const nativeCommandMap = {
   "review.resetProgress": "reset_progress",
 } as const;
 
-function hasNativeTauriRuntime() {
+export interface DesktopImportSelection {
+  fileName: string;
+  filePath: string;
+}
+
+export function hasNativeTauriRuntime() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+export async function pickDesktopImportApkg(): Promise<DesktopImportSelection | null> {
+  if (!hasNativeTauriRuntime()) {
+    return null;
+  }
+
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const selection = await open({
+    directory: false,
+    multiple: false,
+    filters: [
+      {
+        name: "Anki Deck Package",
+        extensions: ["apkg"],
+      },
+    ],
+  });
+
+  if (!selection || Array.isArray(selection)) {
+    return null;
+  }
+
+  return {
+    fileName: basenameFromPath(selection),
+    filePath: selection,
+  };
 }
 
 export async function openDesktopExternalUrl(url: string) {
@@ -70,6 +104,14 @@ export function createDesktopRuntime() {
         });
       }
 
+      if (command === "import.previewApkgFromPath") {
+        const request = payload as ImportPreviewFromPathRequest;
+
+        return invoke<TResponse>(nativeCommandMap[command], {
+          request,
+        });
+      }
+
       if (
         command === "import.commitApkg" ||
         command === "library.selectDeck" ||
@@ -89,4 +131,9 @@ export function createDesktopRuntime() {
       return fallbackRuntime.invoke<TRequest, TResponse>(command, payload);
     },
   });
+}
+
+function basenameFromPath(filePath: string) {
+  const segments = filePath.split(/[\\/]/);
+  return segments.at(-1) ?? filePath;
 }

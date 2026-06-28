@@ -16,7 +16,10 @@ interface ImportPanelProps {
   fieldMapping: ImportFieldMappingForm | null;
   canPreview: boolean;
   canCommit: boolean;
+  isPreviewing: boolean;
+  isImporting: boolean;
   onFileChange(file: File | null): void;
+  onPickNativeFile?: () => void;
   onPreviewImport(): void;
   onCommitImport(): void;
   onFieldMappingChange(
@@ -67,7 +70,10 @@ export function ImportPanel({
   fieldMapping,
   canPreview,
   canCommit,
+  isPreviewing,
+  isImporting,
   onFileChange,
+  onPickNativeFile,
   onPreviewImport,
   onCommitImport,
   onFieldMappingChange,
@@ -97,13 +103,30 @@ export function ImportPanel({
       <label className="mt-5 block text-sm text-slate-300" htmlFor={fileInputId}>
         选择词库文件
       </label>
-      <input
-        accept=".apkg"
-        className="mt-2 block w-full rounded-2xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
-        id={fileInputId}
-        type="file"
-        onChange={(event) => onFileChange(event.target.files?.item(0) ?? null)}
-      />
+      {onPickNativeFile ? (
+        <div className="mt-2 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-slate-100">
+          <button
+            className="rounded-xl border border-slate-600 px-3 py-2 text-sm font-medium text-white transition hover:border-sky-400/40 hover:text-sky-100 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500"
+            disabled={isPreviewing || isImporting}
+            type="button"
+            onClick={onPickNativeFile}
+          >
+            选择词库文件
+          </button>
+          <span className="min-w-0 flex-1 truncate text-slate-300">
+            {selectedFileName ?? "未选择文件"}
+          </span>
+        </div>
+      ) : (
+        <input
+          accept=".apkg"
+          className="mt-2 block w-full rounded-2xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+          disabled={isPreviewing || isImporting}
+          id={fileInputId}
+          type="file"
+          onChange={(event) => onFileChange(event.target.files?.item(0) ?? null)}
+        />
+      )}
 
       <div className="mt-4 flex flex-wrap gap-3">
         <button
@@ -112,7 +135,7 @@ export function ImportPanel({
           type="button"
           onClick={onPreviewImport}
         >
-          预览导入
+          {isPreviewing ? "预览中…" : "预览导入"}
         </button>
         <button
           className="rounded-2xl border border-slate-700 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:text-slate-500"
@@ -120,7 +143,7 @@ export function ImportPanel({
           type="button"
           onClick={onCommitImport}
         >
-          确认导入
+          {isImporting ? "导入中…" : "确认导入"}
         </button>
       </div>
 

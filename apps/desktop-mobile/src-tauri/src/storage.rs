@@ -27,9 +27,11 @@ impl SqliteAppStateStore {
         let connection = self.open_connection()?;
 
         connection
-            .query_row("SELECT snapshot_json FROM app_state WHERE id = 1", [], |row| {
-                row.get::<_, String>(0)
-            })
+            .query_row(
+                "SELECT snapshot_json FROM app_state WHERE id = 1",
+                [],
+                |row| row.get::<_, String>(0),
+            )
             .optional()
     }
 

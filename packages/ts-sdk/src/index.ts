@@ -5,6 +5,7 @@ export type {
   DeckSummaryDto,
   ImportCommitRequest,
   ImportCommitResponse,
+  ImportPreviewFromPathRequest,
   ImportPreviewRequest,
   ImportPreviewResponse,
   ListDecksResponse,
@@ -23,6 +24,7 @@ import type {
   DeckSummaryDto,
   ImportCommitRequest,
   ImportCommitResponse,
+  ImportPreviewFromPathRequest,
   ImportPreviewRequest,
   ImportPreviewResponse,
   ListDecksResponse,
@@ -151,6 +153,14 @@ export function createPhaseOneStubRuntime(
         } as unknown as TResponse;
       }
 
+      if (command === "import.previewApkgFromPath") {
+        const request = payload as ImportPreviewFromPathRequest;
+        return {
+          ...previewResponse,
+          fileName: basenameFromPath(request.filePath),
+        } as unknown as TResponse;
+      }
+
       if (command === "import.commitApkg") {
         const request = payload as ImportCommitRequest;
         const deckId = request.targetDeckId ?? commitResponse.deckId;
@@ -252,4 +262,9 @@ export function createPhaseOneStubRuntime(
       throw new Error(`Unsupported command: ${command}`);
     },
   };
+}
+
+function basenameFromPath(filePath: string) {
+  const segments = filePath.split(/[\\/]/);
+  return segments.at(-1) ?? filePath;
 }

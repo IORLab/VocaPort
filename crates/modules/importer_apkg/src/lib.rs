@@ -8,7 +8,9 @@ use rusqlite::{Connection, MAIN_DB};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use std::io::{Cursor, Read};
+use std::fs::File;
+use std::io::{Cursor, Read, Seek};
+use std::path::Path;
 use thiserror::Error;
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use uuid::Uuid;
@@ -43,45 +45,23 @@ pub fn preview_apkg(
     file_name: &str,
     file_bytes: &[u8],
 ) -> Result<ImportPreviewResponse, ImportPreviewError> {
-    if !file_name.ends_with(".apkg") || file_bytes.is_empty() {
-        return Err(ImportPreviewError::Unsupported(file_name.to_string()));
-    }
+    validate_apkg_file(file_name, !file_bytes.is_empty())?;
 
     let mut archive = ZipArchive::new(Cursor::new(file_bytes))?;
-    let collection_bytes = extract_collection_bytes(&mut archive)?;
-    let connection = open_collection_connection(&collection_bytes)?;
-    let (models_json, decks_json): (String, String) =
-        connection.query_row("SELECT models, decks FROM col LIMIT 1", [], |row| {
-            Ok((row.get(0)?, row.get(1)?))
-        })?;
+    preview_archive(file_name, &mut archive, hash_bytes(file_bytes))
+}
 
-    let deck_name = extract_first_name(&serde_json::from_str(&decks_json)?)?;
-    let field_names = extract_field_names(&serde_json::from_str(&models_json)?)?;
-    let entry_count = count_rows(&connection, "notes")?;
-    let review_event_count = count_optional_rows(&connection, "revlog")?;
-    let media_count = extract_media_count(&mut archive)?;
-    let deck_id = slugify_deck_id(&deck_name);
-    let available_field_names = normalize_field_names(&field_names);
+pub fn preview_apkg_from_path(
+    file_path: &Path,
+) -> Result<ImportPreviewResponse, ImportPreviewError> {
+    let file_name = file_name_from_path(file_path)?;
+    validate_apkg_file(&file_name, true)?;
 
-    let mut hasher = Sha256::new();
-    hasher.update(file_bytes);
+    let file_hash = hash_file(file_path)?;
+    let file = File::open(file_path)?;
+    let mut archive = ZipArchive::new(file)?;
 
-    Ok(ImportPreviewResponse {
-        import_id: Uuid::new_v4().to_string(),
-        file_hash: format!("{:x}", hasher.finalize()),
-        deck_name,
-        resolved_deck_id: Some(deck_id.clone()),
-        file_name: file_name.to_string(),
-        entry_count,
-        review_event_count,
-        media_count,
-        available_field_names,
-        field_candidates: build_field_candidates(&field_names),
-        unresolved_fields: Vec::new(),
-        warning_messages: Vec::new(),
-        is_duplicate_file: false,
-        reimport_target_deck_id: Some(deck_id),
-    })
+    preview_archive(&file_name, &mut archive, file_hash)
 }
 
 pub fn commit_apkg(
@@ -112,12 +92,77 @@ pub fn load_imported_deck_bundle(
     mapping: &ConfirmedFieldMapping,
     target_deck_id: Option<&str>,
 ) -> Result<ImportedDeckBundle, ImportPreviewError> {
-    if !file_name.ends_with(".apkg") || file_bytes.is_empty() {
-        return Err(ImportPreviewError::Unsupported(file_name.to_string()));
-    }
+    validate_apkg_file(file_name, !file_bytes.is_empty())?;
 
     let mut archive = ZipArchive::new(Cursor::new(file_bytes))?;
-    let collection_bytes = extract_collection_bytes(&mut archive)?;
+    load_bundle_from_archive(
+        &mut archive,
+        mapping,
+        target_deck_id,
+        hash_bytes(file_bytes),
+    )
+}
+
+pub fn load_imported_deck_bundle_from_path(
+    file_path: &Path,
+    mapping: &ConfirmedFieldMapping,
+    target_deck_id: Option<&str>,
+) -> Result<ImportedDeckBundle, ImportPreviewError> {
+    let file_name = file_name_from_path(file_path)?;
+    validate_apkg_file(&file_name, true)?;
+
+    let file_hash = hash_file(file_path)?;
+    let file = File::open(file_path)?;
+    let mut archive = ZipArchive::new(file)?;
+
+    load_bundle_from_archive(&mut archive, mapping, target_deck_id, file_hash)
+}
+
+fn preview_archive<R: Read + Seek>(
+    file_name: &str,
+    archive: &mut ZipArchive<R>,
+    file_hash: String,
+) -> Result<ImportPreviewResponse, ImportPreviewError> {
+    let collection_bytes = extract_collection_bytes(archive)?;
+    let connection = open_collection_connection(&collection_bytes)?;
+    let (models_json, decks_json): (String, String) =
+        connection.query_row("SELECT models, decks FROM col LIMIT 1", [], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })?;
+
+    let deck_name = extract_first_name(&serde_json::from_str(&decks_json)?)?;
+    let field_names = extract_field_names(&serde_json::from_str(&models_json)?)?;
+    let entry_count = count_rows(&connection, "notes")?;
+    let review_event_count = count_optional_rows(&connection, "revlog")?;
+    let media_count = extract_media_count(archive)?;
+    let deck_id = slugify_deck_id(&deck_name);
+    let available_field_names = normalize_field_names(&field_names);
+
+    Ok(ImportPreviewResponse {
+        import_id: Uuid::new_v4().to_string(),
+        file_hash,
+        deck_name,
+        resolved_deck_id: Some(deck_id.clone()),
+        file_name: file_name.to_string(),
+        entry_count,
+        review_event_count,
+        media_count,
+        available_field_names,
+        field_candidates: build_field_candidates(&field_names),
+        unresolved_fields: Vec::new(),
+        warning_messages: Vec::new(),
+        is_duplicate_file: false,
+        reimport_target_deck_id: Some(deck_id),
+    })
+}
+
+fn load_bundle_from_archive<R: Read + Seek>(
+    archive: &mut ZipArchive<R>,
+    mapping: &ConfirmedFieldMapping,
+    target_deck_id: Option<&str>,
+    file_hash: String,
+) -> Result<ImportedDeckBundle, ImportPreviewError> {
+    let collection_bytes = extract_collection_bytes(archive)?;
     let connection = open_collection_connection(&collection_bytes)?;
     let (models_json, decks_json): (String, String) =
         connection.query_row("SELECT models, decks FROM col LIMIT 1", [], |row| {
@@ -150,10 +195,7 @@ pub fn load_imported_deck_bundle(
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty())
             .ok_or_else(|| {
-                ImportPreviewError::Unsupported(format!(
-                    "missing lemma value for note {}",
-                    note.id
-                ))
+                ImportPreviewError::Unsupported(format!("missing lemma value for note {}", note.id))
             })?;
 
         let meaning = note
@@ -227,9 +269,6 @@ pub fn load_imported_deck_bundle(
         })
         .collect::<Result<Vec<_>, ImportPreviewError>>()?;
 
-    let mut hasher = Sha256::new();
-    hasher.update(file_bytes);
-
     Ok(ImportedDeckBundle {
         deck_id,
         deck_name,
@@ -237,17 +276,28 @@ pub fn load_imported_deck_bundle(
         cards,
         media: Vec::new(),
         review_events,
-        file_hash: format!("{:x}", hasher.finalize()),
+        file_hash,
     })
 }
 
-fn extract_collection_bytes(
-    archive: &mut ZipArchive<Cursor<&[u8]>>,
+fn extract_collection_bytes<R: Read + Seek>(
+    archive: &mut ZipArchive<R>,
 ) -> Result<Vec<u8>, ImportPreviewError> {
-    let mut collection = archive.by_name("collection.anki2")?;
-    let mut bytes = Vec::new();
-    collection.read_to_end(&mut bytes)?;
-    Ok(bytes)
+    for candidate in [
+        "collection.anki21b",
+        "collection.anki21",
+        "collection.anki2",
+    ] {
+        if let Ok(mut collection) = archive.by_name(candidate) {
+            let mut bytes = Vec::new();
+            collection.read_to_end(&mut bytes)?;
+            return Ok(bytes);
+        }
+    }
+
+    Err(ImportPreviewError::Unsupported(
+        "missing collection database in apkg".to_string(),
+    ))
 }
 
 fn open_collection_connection(collection_bytes: &[u8]) -> Result<Connection, ImportPreviewError> {
@@ -436,11 +486,7 @@ fn optional_field_index(
     field_index: &HashMap<String, usize>,
     field_name: Option<&str>,
 ) -> Option<usize> {
-    field_name.and_then(|value| {
-        field_index
-            .get(&value.trim().to_ascii_lowercase())
-            .copied()
-    })
+    field_name.and_then(|value| field_index.get(&value.trim().to_ascii_lowercase()).copied())
 }
 
 fn count_rows(connection: &Connection, table_name: &str) -> Result<usize, ImportPreviewError> {
@@ -470,8 +516,8 @@ fn table_exists(connection: &Connection, table_name: &str) -> Result<bool, Impor
     Ok(exists > 0)
 }
 
-fn extract_media_count(
-    archive: &mut ZipArchive<Cursor<&[u8]>>,
+fn extract_media_count<R: Read + Seek>(
+    archive: &mut ZipArchive<R>,
 ) -> Result<usize, ImportPreviewError> {
     let mut media_file = match archive.by_name("media") {
         Ok(file) => file,
@@ -488,6 +534,50 @@ fn extract_media_count(
     Ok(value.as_object().map_or(0, |items| items.len()))
 }
 
+fn file_name_from_path(file_path: &Path) -> Result<String, ImportPreviewError> {
+    file_path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .map(ToOwned::to_owned)
+        .ok_or_else(|| {
+            ImportPreviewError::Unsupported(format!(
+                "invalid apkg file path `{}`",
+                file_path.display()
+            ))
+        })
+}
+
+fn hash_bytes(file_bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(file_bytes);
+    format!("{:x}", hasher.finalize())
+}
+
+fn hash_file(file_path: &Path) -> Result<String, ImportPreviewError> {
+    let mut file = File::open(file_path)?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0_u8; 8192];
+
+    loop {
+        let bytes_read = file.read(&mut buffer)?;
+        if bytes_read == 0 {
+            break;
+        }
+
+        hasher.update(&buffer[..bytes_read]);
+    }
+
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn validate_apkg_file(file_name: &str, has_content: bool) -> Result<(), ImportPreviewError> {
+    if file_name.ends_with(".apkg") && has_content {
+        return Ok(());
+    }
+
+    Err(ImportPreviewError::Unsupported(file_name.to_string()))
+}
+
 fn build_field_candidates(field_names: &[String]) -> FieldCandidateSet {
     FieldCandidateSet {
         lemma: find_field_candidate(field_names, &["front"], 100),
@@ -500,8 +590,8 @@ fn build_field_candidates(field_names: &[String]) -> FieldCandidateSet {
 
 fn format_revlog_timestamp(revlog_id: i64) -> Result<String, ImportPreviewError> {
     let milliseconds = i128::from(revlog_id);
-    let timestamp = OffsetDateTime::from_unix_timestamp_nanos(milliseconds * 1_000_000)
-        .map_err(|error| {
+    let timestamp =
+        OffsetDateTime::from_unix_timestamp_nanos(milliseconds * 1_000_000).map_err(|error| {
             ImportPreviewError::Unsupported(format!(
                 "invalid revlog timestamp `{revlog_id}`: {error}"
             ))
