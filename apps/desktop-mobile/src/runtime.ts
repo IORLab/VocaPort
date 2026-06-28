@@ -16,6 +16,21 @@ function hasNativeTauriRuntime() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
+export async function openDesktopExternalUrl(url: string) {
+  if (hasNativeTauriRuntime()) {
+    const { openUrl } = await import("@tauri-apps/plugin-opener");
+    await openUrl(url);
+    return;
+  }
+
+  if (typeof window !== "undefined" && typeof window.open === "function") {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  throw new Error("Current environment cannot open external URLs.");
+}
+
 async function healthPingFromNativeShell() {
   if (hasNativeTauriRuntime()) {
     const { invoke } = await import("@tauri-apps/api/core");

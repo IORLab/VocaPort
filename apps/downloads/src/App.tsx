@@ -34,6 +34,29 @@ const LOCALE_STORAGE_KEY = "vocaport-downloads-locale";
 
 type ReleaseTab = "downloads" | "notes";
 type ReleaseKind = "release" | "prerelease";
+type DevicePlatform = "android" | "ios" | "linux" | "macos" | "windows";
+type DeviceArchitecture = "arm64" | "intel" | "universal" | "x64";
+
+interface CurrentDeviceDescriptor {
+  architecture: DeviceArchitecture | null;
+  platform: DevicePlatform;
+}
+
+interface NavigatorUserAgentDataHighEntropyValues {
+  architecture?: string;
+  bitness?: string;
+  platform?: string;
+}
+
+interface NavigatorWithUserAgentData extends Navigator {
+  userAgentData?: {
+    mobile?: boolean;
+    platform?: string;
+    getHighEntropyValues?: (
+      hints: string[],
+    ) => Promise<NavigatorUserAgentDataHighEntropyValues>;
+  };
+}
 
 function getBrowserThemeDependencies() {
   if (typeof window === "undefined") {
@@ -79,6 +102,324 @@ function persistLocale(locale: Locale, storage?: StorageLike) {
   }
 }
 
+async function detectCurrentDevice(): Promise<CurrentDeviceDescriptor | null> {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const navigator = window.navigator as NavigatorWithUserAgentData;
+  const platform = inferCurrentPlatform({
+    platformHint: navigator.userAgentData?.platform,
+    platformValue: navigator.platform,
+    userAgent: navigator.userAgent,
+  });
+
+  if (!platform) {
+    return null;
+  }
+
+  let architecture = inferCurrentArchitecture({
+    platform,
+    platformValue: navigator.platform,
+    userAgent: navigator.userAgent,
+  });
+
+  if (typeof navigator.userAgentData?.getHighEntropyValues === "function") {
+    try {
+      const values = await navigator.userAgentData.getHighEntropyValues([
+        "architecture",
+        "bitness",
+        "platform",
+      ]);
+
+      architecture =
+        normalizeCurrentArchitecture(
+          platform,
+          values.architecture,
+          values.bitness,
+        ) ?? architecture;
+    } catch (error) {
+      console.warn("Failed to detect the current device architecture.", error);
+    }
+  }
+
+  return {
+    architecture,
+    platform,
+  };
+}
+
+function inferCurrentPlatform({
+  platformHint,
+  platformValue,
+  userAgent,
+}: {
+  platformHint?: string;
+  platformValue?: string;
+  userAgent?: string;
+}): DevicePlatform | null {
+  const normalizedHint = `${platformHint ?? ""} ${platformValue ?? ""} ${userAgent ?? ""}`
+    .toLowerCase();
+
+  if (
+    normalizedHint.includes("iphone") ||
+    normalizedHint.includes("ipad") ||
+    normalizedHint.includes("ipod") ||
+    normalizedHint.includes("ios")
+  ) {
+    return "ios";
+  }
+
+  if (normalizedHint.includes("android")) {
+    return "android";
+  }
+
+  if (normalizedHint.includes("win")) {
+    return "windows";
+  }
+
+  if (normalizedHint.includes("mac")) {
+    return "macos";
+  }
+
+  if (normalizedHint.includes("linux") || normalizedHint.includes("x11")) {
+    return "linux";
+  }
+
+  return null;
+}
+
+function inferCurrentArchitecture({
+  platform,
+  platformValue,
+  userAgent,
+}: {
+  platform: DevicePlatform;
+  platformValue?: string;
+  userAgent?: string;
+}): DeviceArchitecture | null {
+  const normalizedHint = `${platformValue ?? ""} ${userAgent ?? ""}`.toLowerCase();
+
+  if (
+    normalizedHint.includes("arm64") ||
+    normalizedHint.includes("aarch64") ||
+    normalizedHint.includes("apple silicon")
+  ) {
+    return "arm64";
+  }
+
+  if (platform === "macos" && normalizedHint.includes("intel")) {
+    return "intel";
+  }
+
+  if (
+    normalizedHint.includes("x64") ||
+    normalizedHint.includes("x86_64") ||
+    normalizedHint.includes("amd64") ||
+    normalizedHint.includes("win64") ||
+    normalizedHint.includes("wow64")
+  ) {
+    return platform === "macos" ? "intel" : "x64";
+  }
+
+  return null;
+}
+
+function normalizeCurrentArchitecture(
+  platform: DevicePlatform,
+  architecture?: string,
+  bitness?: string,
+): DeviceArchitecture | null {
+  const normalizedArchitecture = architecture?.toLowerCase() ?? "";
+
+  if (
+    normalizedArchitecture.includes("arm") ||
+    normalizedArchitecture.includes("aarch64")
+  ) {
+    return "arm64";
+  }
+
+  if (
+    normalizedArchitecture.includes("x86") ||
+    normalizedArchitecture.includes("x64") ||
+    normalizedArchitecture.includes("amd64")
+  ) {
+    return platform === "macos" ? "intel" : bitness === "64" ? "x64" : null;
+  }
+
+  if (normalizedArchitecture.includes("universal")) {
+    return "universal";
+  }
+
+  return null;
+}
+
+function selectCurrentDeviceAssetId(
+  assets: ReleaseAsset[],
+  currentDevice: CurrentDeviceDescriptor | null,
+): number | null {
+  if (!currentDevice) {
+    return null;
+  }
+
+  const samePlatformAssets = assets.filter(
+    (asset) => inferAssetPlatform(asset) === currentDevice.platform,
+  );
+
+  if (samePlatformAssets.length === 0) {
+    return null;
+  }
+
+  if (
+    currentDevice.architecture === null &&
+    currentDevice.platform === "macos" &&
+    new Set(
+      samePlatformAssets
+        .map((asset) => inferAssetArchitecture(asset.name))
+        .filter((architecture): architecture is DeviceArchitecture => architecture !== null),
+    ).size > 1
+  ) {
+    return null;
+  }
+
+  const rankedAssets = samePlatformAssets
+    .map((asset) => ({
+      asset,
+      score: scoreAssetForCurrentDevice(asset, currentDevice),
+    }))
+    .filter((candidate) => candidate.score >= 0)
+    .sort(
+      (left, right) =>
+        right.score - left.score || left.asset.name.localeCompare(right.asset.name),
+    );
+
+  return rankedAssets[0]?.asset.id ?? null;
+}
+
+function scoreAssetForCurrentDevice(
+  asset: ReleaseAsset,
+  currentDevice: CurrentDeviceDescriptor,
+) {
+  const assetArchitecture = inferAssetArchitecture(asset.name);
+  let score = inferAssetFormatPriority(asset.name);
+
+  if (currentDevice.platform === "android") {
+    return score + (assetArchitecture === "universal" ? 20 : 10);
+  }
+
+  if (currentDevice.platform === "ios") {
+    return -1;
+  }
+
+  if (currentDevice.architecture && assetArchitecture) {
+    if (assetArchitecture === currentDevice.architecture) {
+      score += 30;
+    } else if (assetArchitecture === "universal") {
+      score += 18;
+    } else {
+      return -1;
+    }
+  }
+
+  return score;
+}
+
+function inferAssetPlatform(asset: ReleaseAsset): DevicePlatform | null {
+  const normalizedName = asset.name.toLowerCase();
+
+  if (
+    normalizedName.endsWith(".apk") ||
+    asset.contentType === "application/vnd.android.package-archive"
+  ) {
+    return "android";
+  }
+
+  if (normalizedName.endsWith(".dmg") || normalizedName.endsWith(".pkg")) {
+    return "macos";
+  }
+
+  if (normalizedName.endsWith(".msi") || normalizedName.endsWith(".exe")) {
+    return "windows";
+  }
+
+  if (
+    normalizedName.endsWith(".appimage") ||
+    normalizedName.endsWith(".deb") ||
+    normalizedName.endsWith(".rpm")
+  ) {
+    return "linux";
+  }
+
+  return null;
+}
+
+function inferAssetArchitecture(name: string): DeviceArchitecture | null {
+  const normalizedName = name.toLowerCase();
+
+  if (normalizedName.includes("-universal")) {
+    return "universal";
+  }
+
+  if (normalizedName.includes("-intel")) {
+    return "intel";
+  }
+
+  if (
+    normalizedName.includes("-arm64") ||
+    normalizedName.includes("-aarch64")
+  ) {
+    return "arm64";
+  }
+
+  if (
+    normalizedName.includes("-x64") ||
+    normalizedName.includes("-x86_64") ||
+    normalizedName.includes("-amd64")
+  ) {
+    return "x64";
+  }
+
+  return null;
+}
+
+function inferAssetFormatPriority(name: string) {
+  const normalizedName = name.toLowerCase();
+
+  if (normalizedName.endsWith(".apk")) {
+    return 60;
+  }
+
+  if (normalizedName.endsWith(".dmg")) {
+    return 50;
+  }
+
+  if (normalizedName.endsWith(".pkg")) {
+    return 40;
+  }
+
+  if (normalizedName.endsWith(".exe")) {
+    return 60;
+  }
+
+  if (normalizedName.endsWith(".msi")) {
+    return 45;
+  }
+
+  if (normalizedName.endsWith(".appimage")) {
+    return 60;
+  }
+
+  if (normalizedName.endsWith(".deb")) {
+    return 45;
+  }
+
+  if (normalizedName.endsWith(".rpm")) {
+    return 40;
+  }
+
+  return 0;
+}
+
 export function DownloadsExperience({
   state,
 }: {
@@ -89,6 +430,8 @@ export function DownloadsExperience({
     getInitialLocale(browserDeps.storage),
   );
   const [theme, setTheme] = useState<Theme>(() => getInitialTheme(browserDeps));
+  const [currentDevice, setCurrentDevice] =
+    useState<CurrentDeviceDescriptor | null>(null);
   const copy = getCopy(locale);
 
   useEffect(() => {
@@ -100,6 +443,20 @@ export function DownloadsExperience({
     document.documentElement.style.colorScheme = theme;
     document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
   }, [locale, theme]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void detectCurrentDevice().then((device) => {
+      if (!cancelled) {
+        setCurrentDevice(device);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const repository =
     state.status === "ready"
@@ -140,7 +497,7 @@ export function DownloadsExperience({
         onThemeToggle={handleThemeToggle}
         theme={theme}
       />
-      <PageBody locale={locale} state={state} />
+      <PageBody currentDevice={currentDevice} locale={locale} state={state} />
       <footer className="site-footer">
         <span>{copy.footerLabel}</span>
         <time>{generatedAt}</time>
@@ -158,9 +515,11 @@ function PageFrame({ children }: PropsWithChildren) {
 }
 
 function PageBody({
+  currentDevice,
   locale,
   state,
 }: {
+  currentDevice: CurrentDeviceDescriptor | null;
   locale: Locale;
   state: DownloadsViewState;
 }) {
@@ -178,6 +537,7 @@ function PageBody({
         title={copy.releaseSectionTitle}
       >
         <ReleaseSectionContent
+          currentDevice={currentDevice}
           kind="release"
           locale={locale}
           releases={sections.release}
@@ -191,6 +551,7 @@ function PageBody({
         title={copy.prereleaseSectionTitle}
       >
         <ReleaseSectionContent
+          currentDevice={currentDevice}
           kind="prerelease"
           locale={locale}
           releases={sections.prerelease}
@@ -230,11 +591,13 @@ function ReleaseSection({
 }
 
 function ReleaseSectionContent({
+  currentDevice,
   kind,
   locale,
   releases,
   state,
 }: {
+  currentDevice: CurrentDeviceDescriptor | null;
   kind: ReleaseKind;
   locale: Locale;
   releases: ReleaseRecord[];
@@ -274,7 +637,12 @@ function ReleaseSectionContent({
   return (
     <div className="release-section__list">
       {releases.map((release) => (
-        <ReleaseCard key={release.id} locale={locale} release={release} />
+        <ReleaseCard
+          key={release.id}
+          currentDevice={currentDevice}
+          locale={locale}
+          release={release}
+        />
       ))}
     </div>
   );
@@ -373,9 +741,11 @@ function ThemeToggle({
 }
 
 function ReleaseCard({
+  currentDevice,
   locale,
   release,
 }: {
+  currentDevice: CurrentDeviceDescriptor | null;
   locale: Locale;
   release: ReleaseRecord;
 }) {
@@ -447,7 +817,11 @@ function ReleaseCard({
           role="tabpanel"
         >
           <h4 className="release-card__section-heading">{copy.downloadsTab}</h4>
-          <ReleaseAssetList locale={locale} release={release} />
+          <ReleaseAssetList
+            currentDevice={currentDevice}
+            locale={locale}
+            release={release}
+          />
         </div>
 
         <div
@@ -473,13 +847,18 @@ function ReleaseCard({
 }
 
 function ReleaseAssetList({
+  currentDevice,
   locale,
   release,
 }: {
+  currentDevice: CurrentDeviceDescriptor | null;
   locale: Locale;
   release: ReleaseRecord;
 }) {
-  const copy = getCopy(locale);
+  const currentDeviceAssetId = selectCurrentDeviceAssetId(
+    release.assets,
+    currentDevice,
+  );
 
   return (
     <ul className="asset-list">
@@ -487,7 +866,7 @@ function ReleaseAssetList({
         <ReleaseAssetItem
           key={asset.id}
           asset={asset}
-          downloadAction={copy.downloadAction}
+          isCurrentDevice={asset.id === currentDeviceAssetId}
           locale={locale}
         />
       ))}
@@ -497,19 +876,29 @@ function ReleaseAssetList({
 
 function ReleaseAssetItem({
   asset,
-  downloadAction,
+  isCurrentDevice,
   locale,
 }: {
   asset: ReleaseAsset;
-  downloadAction: string;
+  isCurrentDevice: boolean;
   locale: Locale;
 }) {
+  const copy = getCopy(locale);
+
   return (
-    <li className="asset-item">
+    <li
+      className="asset-item"
+      data-current-device={isCurrentDevice ? "true" : undefined}
+    >
       <div className="asset-item__meta">
-        <span className="asset-item__platform">
-          {inferAssetPlatformLabel(asset, locale)}
-        </span>
+        <div className="asset-item__platform-row">
+          <span className="asset-item__platform">
+            {inferAssetPlatformLabel(asset, locale)}
+          </span>
+          {isCurrentDevice ? (
+            <span className="asset-item__badge">{copy.currentDeviceBadge}</span>
+          ) : null}
+        </div>
         <span className="asset-item__name">{asset.name}</span>
       </div>
       <div className="asset-item__actions">
@@ -518,11 +907,12 @@ function ReleaseAssetItem({
         </span>
         <a
           className="asset-item__link"
+          data-current-device={isCurrentDevice ? "true" : undefined}
           href={asset.downloadUrl}
           rel="noreferrer"
           target="_blank"
         >
-          {downloadAction}
+          {copy.downloadAction}
         </a>
       </div>
     </li>

@@ -1,6 +1,7 @@
 export type Locale = "en" | "zh";
 
 export interface DownloadsCopy {
+  currentDeviceBadge: string;
   downloadAction: string;
   downloadsTab: string;
   emptyPrereleaseSection: string;
@@ -29,6 +30,7 @@ export interface DownloadsCopy {
 
 const copyByLocale: Record<Locale, DownloadsCopy> = {
   en: {
+    currentDeviceBadge: "This device",
     downloadAction: "Download",
     downloadsTab: "Downloads",
     emptyPrereleaseSection: "No prerelease builds are available right now.",
@@ -56,6 +58,7 @@ const copyByLocale: Record<Locale, DownloadsCopy> = {
     unknownPublishedAt: "Unknown",
   },
   zh: {
+    currentDeviceBadge: "本机",
     downloadAction: "下载",
     downloadsTab: "下载列表",
     emptyPrereleaseSection: "暂时没有可用的预发布版本。",

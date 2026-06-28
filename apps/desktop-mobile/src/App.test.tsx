@@ -1,11 +1,37 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
+afterEach(() => {
+  cleanup();
+});
+
 describe("desktop app usability", () => {
+  it("opens deck source shortcuts from the shell", async () => {
+    const user = userEvent.setup();
+    const openSpy = vi.fn();
+
+    Object.defineProperty(window, "open", {
+      configurable: true,
+      value: openSpy,
+    });
+
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("link", { name: /AnkiWeb 共享牌组/i }),
+    );
+
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://ankiweb.net/shared/decks",
+      "_blank",
+      "noopener,noreferrer",
+    );
+  });
+
   it("lets the user preview import, choose the current deck, and start study from the desktop shell", async () => {
     const user = userEvent.setup();
 

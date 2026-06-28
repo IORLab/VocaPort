@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { PageShell, PhaseOneWorkspace } from "@vocaport/ui";
-import { createDesktopRuntime } from "./runtime";
+import { createDesktopRuntime, openDesktopExternalUrl } from "./runtime";
 
 export function App() {
   const [runtime] = useState(() => createDesktopRuntime());
 
   return (
     <PageShell>
-      <PhaseOneWorkspace platformName="Desktop" runtime={runtime} />
+      <PhaseOneWorkspace
+        openExternalUrl={openDesktopExternalUrl}
+        platformName="Desktop"
+        runtime={runtime}
+      />
     </PageShell>
   );
 }

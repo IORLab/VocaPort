@@ -7,6 +7,21 @@ import { DownloadsExperience, DownloadsPage } from "./App";
 import { sampleCatalog } from "./fixtures";
 import { THEME_STORAGE_KEY } from "./theme";
 
+interface MockNavigatorUserAgentDataHighEntropyValues {
+  architecture?: string;
+  bitness?: string;
+  model?: string;
+  platform?: string;
+}
+
+interface MockNavigatorUserAgentData {
+  mobile?: boolean;
+  platform?: string;
+  getHighEntropyValues?: (
+    hints: string[],
+  ) => Promise<MockNavigatorUserAgentDataHighEntropyValues>;
+}
+
 function mockMatchMedia(matches: boolean) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
@@ -18,11 +33,45 @@ function mockMatchMedia(matches: boolean) {
   });
 }
 
+function mockCurrentDevice(
+  overrides: {
+    platform?: string;
+    userAgent?: string;
+    userAgentData?: MockNavigatorUserAgentData;
+  } = {},
+) {
+  Object.defineProperty(window.navigator, "platform", {
+    configurable: true,
+    value: overrides.platform ?? "MacIntel",
+  });
+  Object.defineProperty(window.navigator, "userAgent", {
+    configurable: true,
+    value:
+      overrides.userAgent ??
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+  });
+  Object.defineProperty(window.navigator, "userAgentData", {
+    configurable: true,
+    value:
+      overrides.userAgentData ??
+      ({
+        mobile: false,
+        platform: "macOS",
+        getHighEntropyValues: vi.fn().mockResolvedValue({
+          architecture: "arm",
+          bitness: "64",
+          platform: "macOS",
+        }),
+      } satisfies MockNavigatorUserAgentData),
+  });
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   document.documentElement.removeAttribute("data-theme");
   document.documentElement.removeAttribute("lang");
   mockMatchMedia(false);
+  mockCurrentDevice();
 });
 
 afterEach(() => {
@@ -131,6 +180,43 @@ describe("downloads page", () => {
     ).toBe(
       "https://example.com/downloads/v1.0.1/vocaport-v1.0.1-android-universal-beta.apk",
     );
+  });
+
+  it("marks the best matching download row and button for the current device", async () => {
+    const user = userEvent.setup();
+
+    render(<DownloadsPage catalog={sampleCatalog} />);
+
+    const releaseSection = screen
+      .getByRole("heading", { name: "Release" })
+      .closest("section");
+
+    expect(releaseSection).toBeTruthy();
+
+    await user.click(
+      within(releaseSection as HTMLElement).getByText("VocaPort v1.0.1"),
+    );
+
+    const stableCard = within(releaseSection as HTMLElement)
+      .getByText("VocaPort v1.0.1")
+      .closest("details");
+
+    expect(stableCard?.hasAttribute("open")).toBe(true);
+
+    const currentDeviceRow = await within(
+      stableCard as HTMLElement,
+    ).findByText("This device");
+    const assetRow = currentDeviceRow.closest("li");
+
+    expect(assetRow?.getAttribute("data-current-device")).toBe("true");
+    expect(
+      within(assetRow as HTMLElement).getByText("vocaport-v1.0.1-macos-arm64.dmg"),
+    ).toBeTruthy();
+    expect(
+      within(assetRow as HTMLElement)
+        .getByRole("link", { name: "Download" })
+        .getAttribute("data-current-device"),
+    ).toBe("true");
   });
 
   it("switches release card tabs and localizes release notes", async () => {

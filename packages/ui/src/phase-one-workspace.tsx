@@ -85,11 +85,13 @@ function toOptionalField(value: string) {
 }
 
 interface PhaseOneWorkspaceProps {
+  openExternalUrl?: (url: string) => Promise<void> | void;
   runtime: BridgeRuntimeAdapter;
   platformName: string;
 }
 
 export function PhaseOneWorkspace({
+  openExternalUrl,
   runtime,
   platformName,
 }: PhaseOneWorkspaceProps) {
@@ -341,6 +343,20 @@ export function PhaseOneWorkspace({
     }
   }
 
+  async function handleOpenDeckSource(url: string) {
+    try {
+      if (openExternalUrl) {
+        await openExternalUrl(url);
+      } else {
+        openUrlInBrowser(url);
+      }
+
+      setStatusMessage(null);
+    } catch (error) {
+      setStatusMessage(formatRuntimeError(error, "打开外部链接失败。"));
+    }
+  }
+
   async function handleAnswerQuestion(selectedOptionId: string) {
     if (!question) {
       setStatusMessage("当前没有可作答的题目。");
@@ -484,6 +500,10 @@ export function PhaseOneWorkspace({
                   <a
                     className="group flex items-center justify-between gap-3 rounded-[1.2rem] border border-slate-800 bg-slate-950/70 px-3 py-3 transition hover:border-sky-400/40 hover:bg-slate-950"
                     href={source.href}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      void handleOpenDeckSource(source.href);
+                    }}
                     rel="noreferrer"
                     target="_blank"
                   >
@@ -516,6 +536,14 @@ export function PhaseOneWorkspace({
       </div>
     </section>
   );
+}
+
+function openUrlInBrowser(url: string) {
+  if (typeof window === "undefined" || typeof window.open !== "function") {
+    throw new Error("Current environment cannot open external URLs.");
+  }
+
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 async function readFileBytes(file: File): Promise<Uint8Array> {
