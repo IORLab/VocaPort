@@ -188,29 +188,24 @@ export function PhaseOneWorkspace({
     };
   }, [runtime]);
 
-  async function handlePreviewImport() {
-    if (!selectedImport) {
-      setStatusMessage("请先选择一个 `.apkg` 文件。");
-      return;
-    }
-
+  async function previewImport(selection: SelectedImportFile) {
     setIsPreviewing(true);
     setStatusMessage("正在预览词库…");
 
     try {
       const response =
-        selectedImport.kind === "native-path"
+        selection.kind === "native-path"
           ? await runtime.invoke<
               ImportPreviewFromPathRequest,
               ImportPreviewResponse
             >("import.previewApkgFromPath", {
-              filePath: selectedImport.filePath,
+              filePath: selection.filePath,
             })
           : await runtime.invoke<ImportPreviewRequest, ImportPreviewResponse>(
               "import.previewApkg",
               {
-                fileName: selectedImport.file.name,
-                fileBytes: await readFileBytes(selectedImport.file),
+                fileName: selection.file.name,
+                fileBytes: await readFileBytes(selection.file),
               },
             );
 
@@ -224,6 +219,15 @@ export function PhaseOneWorkspace({
     } finally {
       setIsPreviewing(false);
     }
+  }
+
+  async function handlePreviewImport() {
+    if (!selectedImport) {
+      setStatusMessage("请先选择一个 `.apkg` 文件。");
+      return;
+    }
+
+    await previewImport(selectedImport);
   }
 
   function handleFieldMappingChange(
@@ -293,13 +297,16 @@ export function PhaseOneWorkspace({
         return;
       }
 
-      resetSelectedImportState();
-      setSelectedImport({
+      const nextImport: SelectedImportFile = {
         kind: "native-path",
         displayName: selection.fileName,
         filePath: selection.filePath,
-      });
+      };
+
+      resetSelectedImportState();
+      setSelectedImport(nextImport);
       setStatusMessage(null);
+      await previewImport(nextImport);
     } catch (error) {
       setStatusMessage(formatRuntimeError(error, "选择词库文件失败。"));
     }

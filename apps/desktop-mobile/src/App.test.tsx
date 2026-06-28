@@ -136,9 +136,10 @@ describe("desktop app usability", () => {
     await user.click(screen.getByRole("button", { name: "选择词库文件" }));
     expect(mockOpenDialog).toHaveBeenCalledOnce();
 
-    await user.click(screen.getByRole("button", { name: "预览导入" }));
-
     expect(await screen.findByText("eggrolls-JLPT10k-v3.5")).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "确认导入" }) as HTMLButtonElement).disabled,
+    ).toBe(false);
     expect(mockInvoke).toHaveBeenCalledWith("preview_apkg_from_path", {
       request: {
         filePath: "/Users/jay/Downloads/eggrolls-JLPT10k-v3.5.apkg",
