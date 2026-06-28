@@ -322,10 +322,30 @@ jobs:
         shell: bash
         run: |
           search_root="${{ matrix.search_root }}"
-          app_path="$(find "$search_root" -type d -name 'VocaPort.app' | head -n 1)"
+          dmg_path="$(find "$search_root" -type f -name '*.dmg' | head -n 1)"
+          mount_dir="$(mktemp -d)"
+          mounted_device=""
+
+          cleanup() {
+            if [ -n "$mounted_device" ]; then
+              hdiutil detach "$mounted_device" -quiet || true
+            fi
+            rm -rf "$mount_dir"
+          }
+
+          trap cleanup EXIT
+
+          if [ -z "$dmg_path" ]; then
+            echo "Missing macOS DMG under $search_root." >&2
+            exit 1
+          fi
+
+          attach_output="$(hdiutil attach "$dmg_path" -mountpoint "$mount_dir" -nobrowse -readonly)"
+          mounted_device="$(printf '%s\n' "$attach_output" | awk '/^\/dev\// { print $1; exit }')"
+          app_path="$(find "$mount_dir" -maxdepth 2 -type d -name 'VocaPort.app' | head -n 1)"
 
           if [ -z "$app_path" ]; then
-            echo "Missing macOS app bundle under $search_root." >&2
+            echo "Missing macOS app bundle inside $dmg_path." >&2
             exit 1
           fi
 
@@ -337,6 +357,34 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+
+          function Resolve-AppPath {
+            param([string[]]$SearchRoots)
+
+            $candidateNames = @('VocaPort.exe', 'vocaport_native_shell.exe', 'voca-port.exe')
+
+            foreach ($root in $SearchRoots) {
+              if (-not $root -or -not (Test-Path $root)) {
+                continue
+              }
+
+              foreach ($candidateName in $candidateNames) {
+                $candidatePath = Join-Path $root $candidateName
+                if (Test-Path $candidatePath) {
+                  return $candidatePath
+                }
+              }
+
+              $foundPath = Get-ChildItem -Path $root -Recurse -Include $candidateNames -File -ErrorAction SilentlyContinue |
+                Select-Object -First 1 -ExpandProperty FullName
+
+              if ($foundPath) {
+                return $foundPath
+              }
+            }
+
+            return $null
+          }
 
           function Assert-AppLaunch {
             param([string]$AppPath)
@@ -371,12 +419,13 @@ jobs:
 
           $msiInstallRoot = Join-Path $env:ProgramFiles 'VocaPort'
           Start-Process -FilePath msiexec.exe -Wait -NoNewWindow -ArgumentList @('/i', $msiPath, '/qn', '/norestart')
-          $msiAppPath = Join-Path $msiInstallRoot 'VocaPort.exe'
-          if (-not (Test-Path $msiAppPath)) {
-            $msiAppPath = (Get-ChildItem -Path $env:ProgramFiles -Recurse -Filter VocaPort.exe -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
-          }
+          $msiAppPath = Resolve-AppPath @(
+            $msiInstallRoot,
+            (Join-Path $env:ProgramFiles 'VocaPort'),
+            (Join-Path $env:LOCALAPPDATA 'Programs'),
+            $env:ProgramFiles
+          )
           Assert-AppLaunch $msiAppPath
-          Start-Process -FilePath msiexec.exe -Wait -NoNewWindow -ArgumentList @('/x', $msiPath, '/qn', '/norestart')
 
           $nsisInstallRoot = Join-Path $env:RUNNER_TEMP 'vocaport-nsis'
           if (Test-Path $nsisInstallRoot) {
@@ -384,7 +433,7 @@ jobs:
           }
 
           Start-Process -FilePath $setupPath -Wait -NoNewWindow -ArgumentList @('/S', "/D=$nsisInstallRoot")
-          $nsisAppPath = Join-Path $nsisInstallRoot 'VocaPort.exe'
+          $nsisAppPath = Resolve-AppPath @($nsisInstallRoot)
           Assert-AppLaunch $nsisAppPath
           Remove-Item $nsisInstallRoot -Recurse -Force
 
@@ -426,16 +475,23 @@ jobs:
           assert_starts "$RUNNER_TEMP/vocaport-appimage.log" xvfb-run -a "$appimage_path" --appimage-extract-and-run
 
           package_name="$(dpkg-deb -f "$deb_path" Package)"
-          binary_name="$(basename "$(dpkg-deb -c "$deb_path" | awk '/\/usr\/bin\// { print $NF; exit }')")"
-
           sudo dpkg -i "$deb_path" || sudo apt-get install -f -y
+          installed_binary="$(dpkg -L "$package_name" | while read -r candidate; do
+            if [ -f "$candidate" ] && [ -x "$candidate" ]; then
+              case "$candidate" in
+                *.so|*.desktop) continue ;;
+              esac
+              echo "$candidate"
+              break
+            fi
+          done)"
 
-          if [ -z "$binary_name" ] || [ ! -x "/usr/bin/$binary_name" ]; then
-            echo "Unable to resolve installed Linux desktop binary from $deb_path." >&2
+          if [ -z "$installed_binary" ]; then
+            echo "Unable to resolve installed Linux desktop binary from package $package_name." >&2
             exit 1
           fi
 
-          assert_starts "$RUNNER_TEMP/vocaport-deb.log" xvfb-run -a "/usr/bin/$binary_name"
+          assert_starts "$RUNNER_TEMP/vocaport-deb.log" xvfb-run -a "$installed_binary"
           sudo apt-get remove -y "$package_name" || true
 
       - name: Prepare desktop release assets
