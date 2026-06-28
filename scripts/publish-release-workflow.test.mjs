@@ -25,7 +25,7 @@ describe("publish-release workflow", () => {
     expect(workflow).toContain('export APPLE_SIGNING_IDENTITY="-"');
     expect(workflow).toContain("Verify macOS app bundle signature");
     expect(workflow).toContain('codesign --verify --deep --strict --verbose=4 "$app_path"');
-    expect(workflow).toContain('codesign -dv --verbose=4 "$app_path" 2>&1 | rg "Signature=adhoc"');
+    expect(workflow).toContain('codesign -dv --verbose=4 "$app_path" 2>&1 | grep -q "Signature=adhoc"');
     expect(workflow).not.toContain("Validate macOS signing secrets");
     expect(workflow).not.toContain("Import Apple signing certificate");
     expect(workflow).not.toContain("APPLE_CERTIFICATE");
@@ -44,6 +44,8 @@ describe("publish-release workflow", () => {
     expect(workflow).toContain('"$apksigner_path" verify --verbose "$signed_apk"');
     expect(workflow).toContain("Verify Windows installers and first launch");
     expect(workflow).toContain("Get-AuthenticodeSignature");
+    expect(workflow).toContain("taskkill.exe");
+    expect(workflow).toContain("Write-Warning");
     expect(workflow).toContain("Verify Linux packages and first launch");
     expect(workflow).toContain("xvfb-run -a");
     expect(workflow).toContain('dpkg -i "$deb_path"');

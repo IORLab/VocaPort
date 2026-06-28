@@ -350,7 +350,7 @@ jobs:
           fi
 
           codesign --verify --deep --strict --verbose=4 "$app_path"
-          codesign -dv --verbose=4 "$app_path" 2>&1 | rg "Signature=adhoc"
+          codesign -dv --verbose=4 "$app_path" 2>&1 | grep -q "Signature=adhoc"
 
       - name: Verify Windows installers and first launch
         if: ${{ matrix.profile == 'windows' }}
@@ -400,8 +400,30 @@ jobs:
               throw "App exited too early with code $($process.ExitCode): $AppPath"
             }
 
-            Stop-Process -Id $process.Id -Force
-            Wait-Process -Id $process.Id -ErrorAction SilentlyContinue
+            taskkill.exe /PID $process.Id /T /F | Out-Null
+            Wait-Process -Id $process.Id -Timeout 15 -ErrorAction SilentlyContinue
+          }
+
+          function Remove-InstallRoot {
+            param([string]$InstallRoot)
+
+            foreach ($attempt in 1..5) {
+              if (-not (Test-Path $InstallRoot)) {
+                return
+              }
+
+              try {
+                Remove-Item $InstallRoot -Recurse -Force
+                return
+              } catch {
+                if ($attempt -eq 5) {
+                  Write-Warning "Unable to remove $InstallRoot after first-launch smoke. Continuing because package validation already passed. $($_.Exception.Message)"
+                  return
+                }
+
+                Start-Sleep -Seconds 2
+              }
+            }
           }
 
           $searchRoot = "${{ matrix.search_root }}"
@@ -435,7 +457,7 @@ jobs:
           Start-Process -FilePath $setupPath -Wait -NoNewWindow -ArgumentList @('/S', "/D=$nsisInstallRoot")
           $nsisAppPath = Resolve-AppPath @($nsisInstallRoot)
           Assert-AppLaunch $nsisAppPath
-          Remove-Item $nsisInstallRoot -Recurse -Force
+          Remove-InstallRoot $nsisInstallRoot
 
       - name: Verify Linux packages and first launch
         if: ${{ matrix.profile == 'linux' }}
