@@ -26,6 +26,30 @@ import {
   type WorkspaceTabId,
 } from "./workspace-tabs";
 
+interface DeckDownloadSource {
+  label: string;
+  description: string;
+  href: string;
+}
+
+const deckDownloadSources: DeckDownloadSource[] = [
+  {
+    label: "AnkiWeb 共享牌组",
+    description: "官方共享 deck 目录",
+    href: "https://ankiweb.net/shared/decks",
+  },
+  {
+    label: "AnkiHub",
+    description: "社区协作 deck 平台",
+    href: "https://www.ankihub.net/",
+  },
+  {
+    label: "Awesome Anki",
+    description: "整理过的 deck 与工具索引",
+    href: "https://github.com/tianshanghong/awesome-anki",
+  },
+];
+
 function formatRuntimeError(error: unknown, fallbackMessage: string) {
   if (typeof error === "string" && error.length > 0) {
     return error;
@@ -71,7 +95,6 @@ export function PhaseOneWorkspace({
 }: PhaseOneWorkspaceProps) {
   const fileInputId = useId();
   const [activeTabId, setActiveTabId] = useState<WorkspaceTabId>("import");
-  const [capabilities, setCapabilities] = useState<string[]>([]);
   const [healthStatus, setHealthStatus] = useState("连接中");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
@@ -111,19 +134,6 @@ export function PhaseOneWorkspace({
         if (!cancelled) {
           setHealthStatus("连接失败");
           setStatusMessage(formatRuntimeError(error, "Runtime 健康检查失败。"));
-        }
-      });
-
-    void runtime
-      .invoke<undefined, string[]>("module.listCapabilities", undefined)
-      .then((runtimeCapabilities) => {
-        if (!cancelled) {
-          setCapabilities(runtimeCapabilities);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setStatusMessage(formatRuntimeError(error, "读取模块能力失败。"));
         }
       });
 
@@ -461,17 +471,34 @@ export function PhaseOneWorkspace({
 
         <aside className="grid gap-4">
           <article className="rounded-[1.7rem] border border-slate-800 bg-slate-900/75 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.28)]">
-            <h3 className="text-lg font-semibold text-white">模块设置</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-400">
-              当前壳层继续只负责 bridge 接线，复杂状态全部留在 Rust 核心和共享 UI。
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+              Deck Sources
             </p>
-            <ul className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300">
-              {capabilities.map((capability) => (
-                <li
-                  key={capability}
-                  className="rounded-full border border-slate-700 px-3 py-1"
-                >
-                  {capability}
+            <h3 className="mt-2 text-lg font-semibold text-white">下载词库</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              去外部站点找 `.apkg` 或可导入 deck，下载后回到这里继续导入。
+            </p>
+            <ul className="mt-4 grid gap-2.5">
+              {deckDownloadSources.map((source) => (
+                <li key={source.href}>
+                  <a
+                    className="group flex items-center justify-between gap-3 rounded-[1.2rem] border border-slate-800 bg-slate-950/70 px-3 py-3 transition hover:border-sky-400/40 hover:bg-slate-950"
+                    href={source.href}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        {source.label}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-slate-400">
+                        {source.description}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs font-medium text-sky-300 transition group-hover:text-sky-200">
+                      打开
+                    </span>
+                  </a>
                 </li>
               ))}
             </ul>

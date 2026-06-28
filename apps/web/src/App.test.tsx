@@ -3,12 +3,17 @@ import { describe, expect, it } from "vitest";
 import { App } from "./App";
 
 describe("web shell integration", () => {
-  it("shows import, study, resume, reset, and modules areas", () => {
+  it("shows import, study, resume, reset, and deck download areas", () => {
     const html = renderToStaticMarkup(<App />);
     expect(html).toContain("导入词库");
     expect(html).toContain("开始学习");
     expect(html).toContain("恢复会话");
     expect(html).toContain("重置进度");
-    expect(html).toContain("模块设置");
+    expect(html).toContain("下载词库");
+    expect(html).toContain("AnkiWeb 共享牌组");
+    expect(html).toContain("AnkiHub");
+    expect(html).toContain("Awesome Anki");
+    expect(html).toContain("https://ankiweb.net/shared/decks");
+    expect(html).not.toContain("模块设置");
   });
 });
