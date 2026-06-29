@@ -270,9 +270,17 @@ export function PhaseOneWorkspace({
       });
 
       setCommitSummary(response);
-      await refreshDecks();
-      setActiveTabId("library");
-      setStatusMessage("导入完成，请在词库页确认当前词库。");
+      clearConsumedImportPreview();
+
+      try {
+        await refreshDecks();
+        setActiveTabId("library");
+        setStatusMessage("导入完成，请在词库页确认当前词库。");
+      } catch (error) {
+        setStatusMessage(
+          `导入已完成，但词库列表刷新失败：${formatRuntimeError(error, "请稍后重试。")}`,
+        );
+      }
     } catch (error) {
       setStatusMessage(formatRuntimeError(error, "确认导入失败。"));
     } finally {
@@ -324,6 +332,11 @@ export function PhaseOneWorkspace({
     setPreview(null);
     setFieldMapping(null);
     setCommitSummary(null);
+  }
+
+  function clearConsumedImportPreview() {
+    setPreview(null);
+    setFieldMapping(null);
   }
 
   async function handleSelectDeck(deckId: string) {

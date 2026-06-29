@@ -1,12 +1,60 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
 const mockInvoke = vi.fn();
 const mockOpenDialog = vi.fn();
+
+const nativePreviewResponse = {
+  importId: "preview-native",
+  fileHash: "hash-native",
+  deckName: "eggrolls-JLPT10k-v3.5",
+  resolvedDeckId: "deck-eggrolls",
+  fileName: "eggrolls-JLPT10k-v3.5.apkg",
+  entryCount: 10622,
+  reviewEventCount: 0,
+  mediaCount: 26956,
+  availableFieldNames: ["Back", "Example", "Front"],
+  fieldCandidates: {
+    lemma: { fieldName: "Front", confidence: 100 },
+    meaning: { fieldName: "Back", confidence: 100 },
+  },
+  unresolvedFields: [],
+  warningMessages: [],
+  isDuplicateFile: false,
+  reimportTargetDeckId: "deck-eggrolls",
+};
+
+const nativeCommitResponse = {
+  deckId: "deck-eggrolls",
+  deckName: "eggrolls-JLPT10k-v3.5",
+  importedEntryCount: 10622,
+  importedCardCount: 10622,
+  importedReviewEventCount: 0,
+  skippedCount: 0,
+  warningMessages: [],
+  mediaImportSummary: "0 embedded assets imported",
+  nextRecommendedAction: "start_study",
+};
+
+const nativeDeckListing = {
+  decks: [
+    {
+      deckId: "deck-eggrolls",
+      deckName: "eggrolls-JLPT10k-v3.5",
+      entryCount: 10622,
+      cardCount: 10622,
+      reviewEventCount: 0,
+      dueCount: 10622,
+      hasActiveSession: false,
+      isCurrentDeck: false,
+      lastImportedAt: "2026-06-29T00:00:00Z",
+    },
+  ],
+};
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: mockInvoke,
@@ -105,25 +153,7 @@ describe("desktop app usability", () => {
           },
         });
 
-        return {
-          importId: "preview-native",
-          fileHash: "hash-native",
-          deckName: "eggrolls-JLPT10k-v3.5",
-          resolvedDeckId: "deck-eggrolls",
-          fileName: "eggrolls-JLPT10k-v3.5.apkg",
-          entryCount: 10622,
-          reviewEventCount: 0,
-          mediaCount: 26956,
-          availableFieldNames: ["Back", "Example", "Front"],
-          fieldCandidates: {
-            lemma: { fieldName: "Front", confidence: 100 },
-            meaning: { fieldName: "Back", confidence: 100 },
-          },
-          unresolvedFields: [],
-          warningMessages: [],
-          isDuplicateFile: false,
-          reimportTargetDeckId: "deck-eggrolls",
-        };
+        return nativePreviewResponse;
       }
 
       throw new Error(`Unexpected command: ${command}`);
@@ -212,5 +242,121 @@ describe("desktop app usability", () => {
     expect(
       (screen.getByRole("button", { name: "确认导入" }) as HTMLButtonElement).disabled,
     ).toBe(true);
+  });
+
+  it("surfaces refresh failures after a successful import without treating the commit as failed", async () => {
+    const user = userEvent.setup();
+    let shouldFailDeckRefresh = false;
+    (window as typeof window & { __TAURI_INTERNALS__?: object })
+      .__TAURI_INTERNALS__ = {};
+
+    mockOpenDialog.mockResolvedValue("/Users/jay/Downloads/eggrolls-JLPT10k-v3.5.apkg");
+    mockInvoke.mockImplementation(async (command: string) => {
+      if (command === "native_health_ping") {
+        return "vocaport-ready";
+      }
+
+      if (command === "list_decks") {
+        if (shouldFailDeckRefresh) {
+          throw new Error("list decks unavailable");
+        }
+
+        return {
+          decks: [],
+        };
+      }
+
+      if (command === "get_active_session") {
+        return {
+          question: undefined,
+        };
+      }
+
+      if (command === "preview_apkg_from_path") {
+        return nativePreviewResponse;
+      }
+
+      if (command === "commit_apkg") {
+        shouldFailDeckRefresh = true;
+        return nativeCommitResponse;
+      }
+
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "选择词库文件" }));
+    await user.click(screen.getByRole("button", { name: "确认导入" }));
+
+    expect(
+      await screen.findByText(/导入已完成，但词库列表刷新失败/i),
+    ).toBeTruthy();
+    expect(screen.getByText("导入完成")).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "确认导入" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      screen.getByText("预览后会在这里展示词库摘要和可调整的字段映射。"),
+    ).toBeTruthy();
+  });
+
+  it("clears the consumed preview after a successful import so the same preview cannot be committed twice", async () => {
+    const user = userEvent.setup();
+    let listDecksCallCount = 0;
+    (window as typeof window & { __TAURI_INTERNALS__?: object })
+      .__TAURI_INTERNALS__ = {};
+
+    mockOpenDialog.mockResolvedValue("/Users/jay/Downloads/eggrolls-JLPT10k-v3.5.apkg");
+    mockInvoke.mockImplementation(async (command: string) => {
+      if (command === "native_health_ping") {
+        return "vocaport-ready";
+      }
+
+      if (command === "list_decks") {
+        listDecksCallCount += 1;
+        return listDecksCallCount === 1
+          ? {
+              decks: [],
+            }
+          : nativeDeckListing;
+      }
+
+      if (command === "get_active_session") {
+        return {
+          question: undefined,
+        };
+      }
+
+      if (command === "preview_apkg_from_path") {
+        return nativePreviewResponse;
+      }
+
+      if (command === "commit_apkg") {
+        return nativeCommitResponse;
+      }
+
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "选择词库文件" }));
+    await user.click(screen.getByRole("button", { name: "确认导入" }));
+    expect(
+      await screen.findByText("导入完成，请在词库页确认当前词库。"),
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("tab", { name: "导入" }));
+
+    expect(
+      (screen.getByRole("button", { name: "确认导入" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      screen.getByText("预览后会在这里展示词库摘要和可调整的字段映射。"),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByRole("tab", { name: "导入" })).queryByText("ready"),
+    ).toBeNull();
   });
 });
