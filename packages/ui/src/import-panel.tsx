@@ -51,6 +51,7 @@ function MappingSelect({
         value={value}
         onChange={(event) => onChange(event.target.value)}
       >
+        {!optional ? <option value="">请选择字段</option> : null}
         {optional ? <option value="">不导入</option> : null}
         {options.map((option) => (
           <option key={option} value={option}>

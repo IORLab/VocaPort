@@ -176,29 +176,33 @@ impl PhaseOneService {
         &mut self,
         request: ImportCommitRequest,
     ) -> Result<ImportCommitResponse, PhaseOneServiceError> {
-        let pending = self
-            .pending_imports
-            .remove(&request.import_id)
-            .ok_or_else(|| PhaseOneServiceError::MissingImportPreview(request.import_id.clone()))?;
         let import_summary = commit_apkg(request.clone())?;
-        let bundle = match &pending.source {
-            PendingImportSource::FileBytes(file_bytes) => load_imported_deck_bundle(
-                &pending.file_name,
-                file_bytes,
-                &request.confirmed_field_mapping,
-                request
-                    .target_deck_id
-                    .as_deref()
-                    .or(pending.preview.resolved_deck_id.as_deref()),
-            )?,
-            PendingImportSource::FilePath(file_path) => load_imported_deck_bundle_from_path(
-                file_path,
-                &request.confirmed_field_mapping,
-                request
-                    .target_deck_id
-                    .as_deref()
-                    .or(pending.preview.resolved_deck_id.as_deref()),
-            )?,
+        let (bundle, source_fingerprint) = {
+            let pending =
+                self.pending_imports.get(&request.import_id).ok_or_else(|| {
+                    PhaseOneServiceError::MissingImportPreview(request.import_id.clone())
+                })?;
+            let bundle = match &pending.source {
+                PendingImportSource::FileBytes(file_bytes) => load_imported_deck_bundle(
+                    &pending.file_name,
+                    file_bytes,
+                    &request.confirmed_field_mapping,
+                    request
+                        .target_deck_id
+                        .as_deref()
+                        .or(pending.preview.resolved_deck_id.as_deref()),
+                )?,
+                PendingImportSource::FilePath(file_path) => load_imported_deck_bundle_from_path(
+                    file_path,
+                    &request.confirmed_field_mapping,
+                    request
+                        .target_deck_id
+                        .as_deref()
+                        .or(pending.preview.resolved_deck_id.as_deref()),
+                )?,
+            };
+
+            (bundle, pending.preview.file_name.clone())
         };
         let imported_at = self.next_timestamp();
         let import_record_id = format!("import-{}", request.import_id);
@@ -217,7 +221,7 @@ impl PhaseOneService {
             deck_id: bundle.deck_id.clone(),
             source_type: "anki_apkg".to_string(),
             file_hash: bundle.file_hash.clone(),
-            source_fingerprint: pending.preview.file_name.clone(),
+            source_fingerprint,
             imported_at,
             entry_count: bundle.entries.len(),
             review_event_count: bundle.review_events.len(),
@@ -237,6 +241,7 @@ impl PhaseOneService {
                 _latest_import_record: Some(import_record),
             },
         );
+        self.pending_imports.remove(&request.import_id);
 
         Ok(ImportCommitResponse {
             deck_id: bundle.deck_id,

@@ -73,3 +73,50 @@ fn preview_from_path_can_commit_without_loading_the_apkg_into_bridge_memory() {
     assert_eq!(response.deck_name, "Basic Vocab");
     assert_eq!(response.imported_entry_count, 1);
 }
+
+#[test]
+fn failed_commit_keeps_preview_available_for_retry() {
+    let fixture_path = format!(
+        "{}/../../fixtures/anki/basic-vocab.apkg",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let bytes = std::fs::read(fixture_path).unwrap();
+    let mut service = PhaseOneService::default();
+
+    let preview = service.preview_apkg("basic-vocab.apkg", &bytes).unwrap();
+    let failed_commit = service.commit_apkg(ImportCommitRequest {
+        import_id: preview.import_id.clone(),
+        target_deck_id: preview.resolved_deck_id.clone(),
+        commit_mode: ImportCommitMode::UpsertExistingDeck,
+        confirmed_field_mapping: ConfirmedFieldMapping {
+            lemma_field: "MissingFront".to_string(),
+            meaning_field: "Back".to_string(),
+            example_field: Some("Example".to_string()),
+            image_field: None,
+            audio_field: None,
+        },
+    });
+
+    assert!(failed_commit
+        .unwrap_err()
+        .to_string()
+        .contains("field mapping `MissingFront` does not exist"));
+
+    let response = service
+        .commit_apkg(ImportCommitRequest {
+            import_id: preview.import_id,
+            target_deck_id: preview.resolved_deck_id,
+            commit_mode: ImportCommitMode::UpsertExistingDeck,
+            confirmed_field_mapping: ConfirmedFieldMapping {
+                lemma_field: "Front".to_string(),
+                meaning_field: "Back".to_string(),
+                example_field: Some("Example".to_string()),
+                image_field: None,
+                audio_field: None,
+            },
+        })
+        .unwrap();
+
+    assert_eq!(response.deck_name, "Basic Vocab");
+    assert_eq!(response.imported_entry_count, 1);
+}

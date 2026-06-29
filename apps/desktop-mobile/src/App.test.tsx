@@ -146,4 +146,71 @@ describe("desktop app usability", () => {
       },
     });
   });
+
+  it("keeps required mappings empty when preview has no reliable field candidates", async () => {
+    const user = userEvent.setup();
+    (window as typeof window & { __TAURI_INTERNALS__?: object })
+      .__TAURI_INTERNALS__ = {};
+
+    mockOpenDialog.mockResolvedValue("/Users/jay/Downloads/eggrolls-JLPT10k-v3.5.apkg");
+    mockInvoke.mockImplementation(async (command: string) => {
+      if (command === "native_health_ping") {
+        return "vocaport-ready";
+      }
+
+      if (command === "list_decks") {
+        return {
+          decks: [],
+        };
+      }
+
+      if (command === "get_active_session") {
+        return {
+          question: undefined,
+        };
+      }
+
+      if (command === "preview_apkg_from_path") {
+        return {
+          importId: "preview-native",
+          fileHash: "hash-native",
+          deckName: "eggrolls-JLPT10k-v3.5",
+          resolvedDeckId: "deck-eggrolls",
+          fileName: "eggrolls-JLPT10k-v3.5.apkg",
+          entryCount: 10622,
+          reviewEventCount: 0,
+          mediaCount: 26956,
+          availableFieldNames: ["Alt1", "NoteID", "VocabDefSC", "VocabKanji"],
+          fieldCandidates: {
+            lemma: undefined,
+            meaning: undefined,
+            example: undefined,
+            image: undefined,
+            audio: undefined,
+          },
+          unresolvedFields: [],
+          warningMessages: [],
+          isDuplicateFile: false,
+          reimportTargetDeckId: "deck-eggrolls",
+        };
+      }
+
+      throw new Error(`Unexpected command: ${command}`);
+    });
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "选择词库文件" }));
+
+    expect(
+      (await screen.findByRole("combobox", { name: "词形字段" }) as HTMLSelectElement)
+        .value,
+    ).toBe("");
+    expect(
+      (screen.getByRole("combobox", { name: "释义字段" }) as HTMLSelectElement).value,
+    ).toBe("");
+    expect(
+      (screen.getByRole("button", { name: "确认导入" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
 });

@@ -67,14 +67,8 @@ function buildInitialFieldMapping(
   preview: ImportPreviewResponse,
 ): ImportFieldMappingForm {
   return {
-    lemmaField:
-      preview.fieldCandidates.lemma?.fieldName ??
-      preview.availableFieldNames[0] ??
-      "",
-    meaningField:
-      preview.fieldCandidates.meaning?.fieldName ??
-      preview.availableFieldNames[0] ??
-      "",
+    lemmaField: preview.fieldCandidates.lemma?.fieldName ?? "",
+    meaningField: preview.fieldCandidates.meaning?.fieldName ?? "",
     exampleField: preview.fieldCandidates.example?.fieldName ?? "",
     imageField: preview.fieldCandidates.image?.fieldName ?? "",
     audioField: preview.fieldCandidates.audio?.fieldName ?? "",

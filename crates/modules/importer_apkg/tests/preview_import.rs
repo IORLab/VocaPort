@@ -139,6 +139,56 @@ fn preview_and_load_bundle_prefer_collection_anki21_when_available() {
     assert_eq!(bundle.entries[0].examples, vec!["麻婆茄子".to_string()]);
 }
 
+#[test]
+fn preview_guesses_common_apkg_field_names_beyond_front_and_back() {
+    let database = build_collection_database_bytes(
+        r#"{"1":{"name":"JLPT Model","flds":[{"name":"NoteID"},{"name":"VocabKanji"},{"name":"VocabDefSC"},{"name":"SentType1"},{"name":"SentKanji1"},{"name":"VocabAudio"}]}}"#,
+        r#"{"1":{"name":"JLPT Deck"}}"#,
+        &[(
+            1001_i64,
+            "1\u{1f}食べる\u{1f}吃\u{1f}basic\u{1f}昨日は寿司を食べる\u{1f}taberu.mp3",
+        )],
+        &[(2001_i64, 1001_i64)],
+        &[],
+    );
+    let bytes = build_apkg_archive(&[("collection.anki21", &database), ("media", b"{}")]);
+
+    let preview = preview_apkg("jlpt.apkg", &bytes).unwrap();
+
+    assert_eq!(
+        preview
+            .field_candidates
+            .lemma
+            .as_ref()
+            .map(|candidate| candidate.field_name.as_str()),
+        Some("VocabKanji")
+    );
+    assert_eq!(
+        preview
+            .field_candidates
+            .meaning
+            .as_ref()
+            .map(|candidate| candidate.field_name.as_str()),
+        Some("VocabDefSC")
+    );
+    assert_eq!(
+        preview
+            .field_candidates
+            .example
+            .as_ref()
+            .map(|candidate| candidate.field_name.as_str()),
+        Some("SentKanji1")
+    );
+    assert_eq!(
+        preview
+            .field_candidates
+            .audio
+            .as_ref()
+            .map(|candidate| candidate.field_name.as_str()),
+        Some("VocabAudio")
+    );
+}
+
 fn build_apkg_fixture_with_review_history() -> Vec<u8> {
     let connection = Connection::open_in_memory().unwrap();
 

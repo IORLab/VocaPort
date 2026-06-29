@@ -580,11 +580,11 @@ fn validate_apkg_file(file_name: &str, has_content: bool) -> Result<(), ImportPr
 
 fn build_field_candidates(field_names: &[String]) -> FieldCandidateSet {
     FieldCandidateSet {
-        lemma: find_field_candidate(field_names, &["front"], 100),
-        meaning: find_field_candidate(field_names, &["back"], 100),
-        example: find_field_candidate(field_names, &["example"], 90),
-        image: find_field_candidate(field_names, &["image", "picture"], 80),
-        audio: find_field_candidate(field_names, &["audio", "sound"], 80),
+        lemma: find_lemma_field_candidate(field_names),
+        meaning: find_meaning_field_candidate(field_names),
+        example: find_example_field_candidate(field_names),
+        image: find_image_field_candidate(field_names),
+        audio: find_audio_field_candidate(field_names),
     }
 }
 
@@ -608,7 +608,7 @@ fn find_field_candidate(
     confidence: u8,
 ) -> Option<FieldCandidate> {
     field_names.iter().find_map(|field_name| {
-        let normalized = field_name.trim().to_ascii_lowercase();
+        let normalized = normalize_field_name(field_name);
         if expected_names
             .iter()
             .any(|expected| *expected == normalized)
@@ -621,6 +621,212 @@ fn find_field_candidate(
             None
         }
     })
+}
+
+fn find_lemma_field_candidate(field_names: &[String]) -> Option<FieldCandidate> {
+    find_field_candidate(field_names, &["front", "lemma", "term", "word"], 100).or_else(|| {
+        find_token_field_candidate(
+            field_names,
+            &["vocab"],
+            &["kanji", "kana", "word", "term", "expression", "text", "lemma"],
+            &[
+                "alt",
+                "audio",
+                "back",
+                "def",
+                "example",
+                "furigana",
+                "id",
+                "image",
+                "meaning",
+                "picture",
+                "pitch",
+                "pos",
+                "sent",
+                "sentence",
+                "sound",
+                "translation",
+                "type",
+            ],
+            96,
+        )
+    })
+    .or_else(|| {
+        find_token_field_candidate(
+            field_names,
+            &[],
+            &["kanji", "kana", "word", "term", "expression", "lemma", "front"],
+            &[
+                "alt",
+                "audio",
+                "back",
+                "def",
+                "example",
+                "furigana",
+                "id",
+                "image",
+                "meaning",
+                "picture",
+                "pitch",
+                "pos",
+                "sent",
+                "sentence",
+                "sound",
+                "translation",
+                "type",
+            ],
+            88,
+        )
+    })
+}
+
+fn find_meaning_field_candidate(field_names: &[String]) -> Option<FieldCandidate> {
+    find_field_candidate(
+        field_names,
+        &["back", "meaning", "definition", "translation", "gloss"],
+        100,
+    )
+    .or_else(|| {
+        find_token_field_candidate(
+            field_names,
+            &[],
+            &["def", "meaning", "definition", "translation", "gloss", "answer", "back"],
+            &[
+                "alt",
+                "audio",
+                "example",
+                "id",
+                "image",
+                "picture",
+                "sent",
+                "sentence",
+                "sound",
+                "type",
+            ],
+            96,
+        )
+    })
+}
+
+fn find_example_field_candidate(field_names: &[String]) -> Option<FieldCandidate> {
+    find_field_candidate(
+        field_names,
+        &["example", "sentence", "usage", "phrase", "context"],
+        95,
+    )
+    .or_else(|| {
+        find_token_field_candidate(
+            field_names,
+            &["sent"],
+            &["kanji", "kana", "text", "raw", "content", "body", "value", "jp", "jpn", "zh", "en"],
+            &["audio", "id", "image", "picture", "sound", "type"],
+            92,
+        )
+    })
+}
+
+fn find_image_field_candidate(field_names: &[String]) -> Option<FieldCandidate> {
+    find_field_candidate(field_names, &["image", "picture"], 80).or_else(|| {
+        find_token_field_candidate(
+            field_names,
+            &[],
+            &["image", "picture", "photo", "illustration"],
+            &["audio", "sound"],
+            76,
+        )
+    })
+}
+
+fn find_audio_field_candidate(field_names: &[String]) -> Option<FieldCandidate> {
+    find_field_candidate(field_names, &["audio", "sound", "pronunciation", "voice"], 80)
+        .or_else(|| {
+            find_token_field_candidate(
+                field_names,
+                &[],
+                &["audio", "sound", "pronunciation", "voice", "mp3"],
+                &["image", "picture"],
+                76,
+            )
+        })
+}
+
+fn find_token_field_candidate(
+    field_names: &[String],
+    required_tokens: &[&str],
+    any_tokens: &[&str],
+    excluded_tokens: &[&str],
+    confidence: u8,
+) -> Option<FieldCandidate> {
+    field_names.iter().find_map(|field_name| {
+        let tokens = tokenize_field_name(field_name);
+        if required_tokens
+            .iter()
+            .all(|token| tokens.iter().any(|candidate| candidate == token))
+            && (any_tokens.is_empty()
+                || any_tokens
+                    .iter()
+                    .any(|token| tokens.iter().any(|candidate| candidate == token)))
+            && excluded_tokens
+                .iter()
+                .all(|token| tokens.iter().all(|candidate| candidate != token))
+        {
+            Some(FieldCandidate {
+                field_name: field_name.clone(),
+                confidence,
+            })
+        } else {
+            None
+        }
+    })
+}
+
+fn normalize_field_name(field_name: &str) -> String {
+    field_name
+        .trim()
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .map(|character| character.to_ascii_lowercase())
+        .collect()
+}
+
+fn tokenize_field_name(field_name: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut previous_character: Option<char> = None;
+
+    for character in field_name.trim().chars() {
+        if !character.is_ascii_alphanumeric() {
+            push_field_name_token(&mut tokens, &mut current);
+            previous_character = None;
+            continue;
+        }
+
+        let should_split = if let Some(previous) = previous_character {
+            (character.is_ascii_uppercase() && previous.is_ascii_lowercase())
+                || (character.is_ascii_digit() && previous.is_ascii_alphabetic())
+                || (character.is_ascii_alphabetic() && previous.is_ascii_digit())
+        } else {
+            false
+        };
+
+        if should_split {
+            push_field_name_token(&mut tokens, &mut current);
+        }
+
+        current.push(character.to_ascii_lowercase());
+        previous_character = Some(character);
+    }
+
+    push_field_name_token(&mut tokens, &mut current);
+    tokens
+}
+
+fn push_field_name_token(tokens: &mut Vec<String>, current: &mut String) {
+    if current.is_empty() {
+        return;
+    }
+
+    tokens.push(std::mem::take(current));
 }
 
 fn slugify_deck_id(deck_name: &str) -> String {
